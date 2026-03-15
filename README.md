@@ -19,20 +19,25 @@ Bot de control y moderación para grupos de WhatsApp. Construido con [Baileys](h
 
 ```bash
 # 1. Clonar el repositorio
-git clone <url> wa-group-bot
-cd wa-group-bot
+git clone https://github.com/Depwisescript/bot-whatsapp.git
+cd bot-whatsapp
 
-# 2. Instalar dependencias
+# 2. (VPS Ubuntu) Instalar Node.js 20 LTS
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt install -y nodejs
+
+# 3. Instalar dependencias
 npm install
 
-# 3. Configurar .env
+# 4. Configurar .env
 cp .env.example .env
-# Editar .env con tu número de teléfono
+nano .env
+# → OWNER_NUMBER=tu_numero_con_codigo_pais (ej: 5491112345678)
 
-# 4. Ejecutar en desarrollo
+# 5. Ejecutar en desarrollo
 npm run dev
 
-# 5. Escanear QR con WhatsApp (Dispositivos vinculados)
+# 6. Escanear QR con WhatsApp → Dispositivos vinculados → Vincular dispositivo
 ```
 
 ## 🔧 Comandos
