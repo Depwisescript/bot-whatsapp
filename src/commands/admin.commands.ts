@@ -219,26 +219,37 @@ export function registerAdminCommands(): void {
             }
         },
     });
-    // ── !unban @user ─────────────────────────────────────────────
+    // ── !unban @user o número ────────────────────────────────────
     registerCommand({
         name: 'unban',
         description: 'Quitar el ban permanente a un miembro',
-        usage: '!unban @usuario',
+        usage: '!unban @usuario o !unban número (ej: 54911...)',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            let target = ctx.mentionedJids[0];
+
+            // Si no hay mención, intentar usar el número proporcionado en texto
+            if (!target && ctx.args.length > 0) {
+                let number = ctx.args[0].replace(/[^0-9]/g, '');
+                if (number) {
+                    target = `${number}@s.whatsapp.net`;
+                }
+            }
+
             if (!target) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '⚠️ Debes mencionar al usuario.\nUso: !unban @usuario',
+                    text: '⚠️ Debes mencionar al usuario o escribir su número completo.\nUso: !unban @usuario o !unban 346XXXXXXX',
                 });
                 return;
             }
 
             try {
                 removeBan(ctx.groupJid, target);
+
+                // Si fue por número y no está en el grupo para mencionar, mostramos el número limpio
+                const displayName = target.split('@')[0];
                 await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: `✅ @${target.split('@')[0]} ha sido desbaneado y ahora puede volver a unirse al grupo.`,
-                    mentions: [target],
+                    text: `✅ El número ${displayName} ha sido desbaneado.\nYa puede volver a unirse al grupo usando el enlace de invitación.`,
                 });
             } catch (err) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
