@@ -47,6 +47,7 @@ npm run dev
 |---|---|
 | `!kick @user` | Expulsar miembro |
 | `!ban @user` | Expulsar + banear permanente |
+| `!unban @user` | Quitar ban permanente |
 | `!warn @user [razón]` | Dar advertencia manual |
 | `!warnings @user` | Ver advertencias |
 | `!resetwarn @user` | Resetear advertencias |

@@ -1,5 +1,5 @@
 import { registerCommand, CommandContext } from './index';
-import { addWarning, getWarnings, getWarningCount, resetWarnings, addBan } from '../services/db.service';
+import { addWarning, getWarnings, getWarningCount, resetWarnings, addBan, removeBan } from '../services/db.service';
 import { config } from '../config';
 
 export function registerAdminCommands(): void {
@@ -215,6 +215,34 @@ export function registerAdminCommands(): void {
             } catch (err) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
                     text: '❌ No pude quitar admin al usuario.',
+                });
+            }
+        },
+    });
+    // ── !unban @user ─────────────────────────────────────────────
+    registerCommand({
+        name: 'unban',
+        description: 'Quitar el ban permanente a un miembro',
+        usage: '!unban @usuario',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            const target = ctx.mentionedJids[0];
+            if (!target) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Debes mencionar al usuario.\nUso: !unban @usuario',
+                });
+                return;
+            }
+
+            try {
+                removeBan(ctx.groupJid, target);
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `✅ @${target.split('@')[0]} ha sido desbaneado y ahora puede volver a unirse al grupo.`,
+                    mentions: [target],
+                });
+            } catch (err) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ Hubo un error al intentar desbanear al usuario.',
                 });
             }
         },
