@@ -73,6 +73,7 @@ Detecta automáticamente:
 
 ## 🚀 Producción (VPS Ubuntu)
 
+### Instalar y Arrancar
 ```bash
 # Compilar
 npm run build
@@ -85,6 +86,20 @@ pm2 start ecosystem.config.js
 pm2 save
 pm2 startup
 ```
+
+### Actualizar con Nuevos Cambios
+Si realizas modificaciones al código, actualiza el bot en el VPS así:
+```bash
+git pull                   # 1. Traer los cambios
+npm run build              # 2. Recompilar
+pm2 restart wa-group-bot   # 3. Reiniciar el bot
+```
+
+### Comandos Útiles de PM2
+- `pm2 logs wa-group-bot` — Ver logs en tiempo real (útil para ver el QR)
+- `pm2 stop wa-group-bot` — Detener el bot
+- `pm2 restart wa-group-bot` — Reiniciar el bot
+- `pm2 status` — Ver estado del bot
 
 ## 📁 Estructura
 
