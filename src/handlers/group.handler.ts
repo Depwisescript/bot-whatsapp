@@ -37,10 +37,7 @@ export function setupGroupHandler(sock: WASocket): void {
                 }
 
                 case 'remove': {
-                    await sock.sendMessage(groupJid, {
-                        text: `👋 @${jid.split('@')[0]} ha salido del grupo.`,
-                        mentions: [jid],
-                    });
+                    // No goodbye message
                     break;
                 }
 
