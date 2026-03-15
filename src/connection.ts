@@ -6,6 +6,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import { Boom } from '@hapi/boom';
+import qrcode from 'qrcode-terminal';
 import { config } from './config';
 import { initCommands } from './commands/index';
 import { setupMessageHandler } from './handlers/message.handler';
@@ -30,7 +31,6 @@ export async function startBot(): Promise<void> {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, logger),
         },
-        printQRInTerminal: true,
         logger,
         generateHighQualityLinkPreview: false,
         markOnlineOnConnect: true,
@@ -44,7 +44,8 @@ export async function startBot(): Promise<void> {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-            console.log('\n📱 Escanea el código QR con tu teléfono WhatsApp\n');
+            console.log('\n📱 Escanea el código QR con tu teléfono WhatsApp:\n');
+            qrcode.generate(qr, { small: true });
         }
 
         if (connection === 'close') {
