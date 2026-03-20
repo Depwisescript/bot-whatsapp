@@ -57,14 +57,15 @@ export async function generateAIImage(prompt: string): Promise<Buffer | null> {
         const response = await fetch(url);
 
         if (!response.ok) {
-            console.error(`Pollinations API Error: ${response.status} ${response.statusText}`);
+            console.error(`[IMAGE-DEBUG] Pollinations Error: ${response.status} ${response.statusText}`);
             return null;
         }
 
         const arrayBuffer = await response.arrayBuffer();
+        console.log(`[IMAGE-DEBUG] Éxito: Imagen descargada. Tamaño: ${arrayBuffer.byteLength} bytes`);
         return Buffer.from(arrayBuffer);
-    } catch (err) {
-        console.error('Image Generation Error:', err);
+    } catch (err: any) {
+        console.error('[IMAGE-DEBUG] Error fatal descargando imagen:', err.message || err);
         return null;
     }
 }
