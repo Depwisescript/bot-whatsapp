@@ -121,8 +121,14 @@ export function setupMessageHandler(sock: WASocket): void {
                 const remoteJid = message.key.remoteJid;
                 if (!remoteJid) continue;
 
+                // Extract message body early to ignore background/protocol messages
+                const body = getMessageBody(message);
+
                 // ── Auto-reply for Direct Messages (DMs) ──
                 if (remoteJid.endsWith('@s.whatsapp.net')) {
+                    // Ignore empty messages (protocol messages, typing indicators, key syncs)
+                    if (!body) continue;
+
                     // Solo responder si no está en cooldown
                     if (!dmCooldownCache.has(remoteJid) && config.autoReplyMsg) {
                         dmCooldownCache.add(remoteJid);
@@ -140,8 +146,6 @@ export function setupMessageHandler(sock: WASocket): void {
                 const groupJid = remoteJid;
                 const senderJid = message.key.participant || '';
                 if (!senderJid) continue;
-
-                const body = getMessageBody(message);
 
                 // Check if sender is admin
                 const isAdmin = await isGroupAdmin(sock, groupJid, senderJid);
