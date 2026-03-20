@@ -1,7 +1,7 @@
 import { registerCommand, CommandContext, getAllCommands } from './index';
 import { config } from '../config';
 import { getWarnings, getWarningCount, isBanned } from '../services/db.service';
-import { generateAIResponse } from '../services/ai.service';
+import { generateAIResponse, generateAIImage } from '../services/ai.service';
 import * as os from 'os';
 
 export function registerGeneralCommands(): void {
@@ -213,6 +213,47 @@ _Los admins están exentos de la moderación automática._`;
                 await ctx.sock.sendMessage(ctx.groupJid, { text: response });
             } catch (err) {
                 await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ Ocurrió un error al contactar al cerebro de IA.' });
+            } finally {
+                await ctx.sock.sendPresenceUpdate('paused', ctx.groupJid);
+            }
+        },
+    });
+
+    // ── !imagine ──────────────────────────────────────────────────
+    registerCommand({
+        name: 'imagine',
+        description: 'Generar una imagen usando Inteligencia Artificial (Gemini)',
+        usage: '!imagine [descripción de la imagen]',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            const prompt = ctx.args.join(' ');
+
+            if (!prompt) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Debes escribir qué quieres que dibuje.\nUso: !imagine un gato con sombrero viajando en el espacio',
+                });
+                return;
+            }
+
+            // Optional loading placeholder
+            await ctx.sock.sendMessage(ctx.groupJid, { text: '🎨 Generando imagen, por favor espera un momento...' });
+            await ctx.sock.sendPresenceUpdate('composing', ctx.groupJid);
+
+            try {
+                const imageBuffer = await generateAIImage(prompt);
+
+                if (imageBuffer) {
+                    await ctx.sock.sendMessage(ctx.groupJid, {
+                        image: imageBuffer,
+                        caption: `✨ *Imagen generada:* "${prompt}"\n🤖 Por Depwise AI`
+                    });
+                } else {
+                    await ctx.sock.sendMessage(ctx.groupJid, {
+                        text: '❌ No se pudo generar la imagen. Tu cuenta de Gemini podría no tener permisos para crear imágenes o se alcanzó el límite.'
+                    });
+                }
+            } catch (err) {
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ Ocurrió un error al intentar crear la imagen.' });
             } finally {
                 await ctx.sock.sendPresenceUpdate('paused', ctx.groupJid);
             }

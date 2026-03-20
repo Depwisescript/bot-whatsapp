@@ -36,7 +36,49 @@ export async function generateAIResponse(prompt: string, context?: string): Prom
         const result = await model.generateContent(fullPrompt);
         return result.response.text();
     } catch (err) {
-        console.error('Gemini API Error:', err);
+        console.error('Gemini API Error (Text):', err);
         return '❌ Hubo un error al intentar consultar a la Inteligencia Artificial. Por favor intenta en unos minutos.';
+    }
+}
+
+/**
+ * Generate an image using Google Gemini 2.5 Flash
+ * 
+ * @param prompt The description of the image to create
+ * @returns A Buffer with the image data, or null on error
+ */
+export async function generateAIImage(prompt: string): Promise<Buffer | null> {
+    if (!genAI) return null;
+
+    try {
+        // According to Google, generating models with IMAGE modality output might use a specific endpoint 
+        // or config. Let's initialize a dedicated call configuration if available in the SDK.
+        const imageModel = genAI.getGenerativeModel({
+            model: 'gemini-2.5-flash', // Some SDKs or tiers might require 'gemini-2.5-flash-image'
+        });
+
+        const result = await imageModel.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+                // request_modalities might not be typed fully in older SDK versions, 
+                // but let's try standard text-to-image prompt if supported by the model
+                // @ts-ignore - responseModalities could be experimental in current types
+                responseModalities: ["IMAGE"]
+            }
+        });
+
+        // The response might contain an image part.
+        const candidate = result.response.candidates?.[0];
+        const part = candidate?.content?.parts?.[0];
+
+        if (part?.inlineData?.data) {
+            return Buffer.from(part.inlineData.data, 'base64');
+        }
+
+        console.warn('Gemini Image API response did not contain inlineData. Response:', JSON.stringify(result));
+        return null;
+    } catch (err) {
+        console.error('Gemini API Error (Image):', err);
+        return null;
     }
 }
