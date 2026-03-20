@@ -51,8 +51,9 @@ export async function generateAIResponse(prompt: string, context?: string): Prom
 export async function generateAIImage(prompt: string): Promise<Buffer | null> {
     try {
         // Pollinations.ai is a fantastic free API that wraps Stable Diffusion
-        // encodeURIComponent ensures spaces/emojis in the prompt don't break the URL
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&enhance=true`;
+        // Adding a random seed ensures we bypass any server 500 caches and forces a fresh generation
+        const seed = Math.floor(Math.random() * 99999);
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&enhance=true&seed=${seed}&width=512&height=512`;
         
         const response = await fetch(url);
 
