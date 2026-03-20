@@ -115,15 +115,8 @@ export function setupMessageHandler(sock: WASocket): void {
 
         for (const message of messages) {
             try {
-                console.log(`[BRUTE-FORCE-LOG] Evento de mensaje recibido. type: ${type}`);
-                console.log(`[BRUTE-FORCE-LOG] remoteJid: ${message.key.remoteJid} | fromMe: ${message.key.fromMe}`);
-                console.log(`[BRUTE-FORCE-LOG] isBotMessage check: ${isBotMessage(sock, message)}`);
-
                 // Ignore bot's own messages
-                if (message.key.fromMe || isBotMessage(sock, message)) {
-                    console.log(`[BRUTE-FORCE-LOG] Mensaje ignorado por ser del propio bot.`);
-                    continue;
-                }
+                if (message.key.fromMe || isBotMessage(sock, message)) continue;
 
                 const remoteJid = message.key.remoteJid;
                 if (!remoteJid) continue;
@@ -132,25 +125,18 @@ export function setupMessageHandler(sock: WASocket): void {
                 const body = getMessageBody(message);
 
                 // ── Auto-reply for Direct Messages (DMs) ──
-                if (remoteJid.endsWith('@s.whatsapp.net')) {
-                    console.log(`[DEBUG] Recibido DM de: ${remoteJid} | Body: "${body}" | fromMe: ${message.key.fromMe}`);
-                    
+                // Now supports standard numbers AND @lid (WhatsApp Privacy linked IDs)
+                if (remoteJid.endsWith('@s.whatsapp.net') || remoteJid.endsWith('@lid')) {
                     // Ignore empty messages (protocol messages, typing indicators, key syncs)
-                    if (!body) {
-                        console.log(`[DEBUG] Ignorado: Mensaje vacío / de protocolo.`);
-                        continue;
-                    }
+                    if (!body) continue;
 
                     // Solo responder si no está en cooldown
                     if (!dmCooldownCache.has(remoteJid) && config.autoReplyMsg) {
-                        console.log(`[DEBUG] Respondiendo a ${remoteJid} con autoReplyMsg.`);
                         dmCooldownCache.add(remoteJid);
                         await sock.sendMessage(remoteJid, { text: config.autoReplyMsg });
                         
                         // Cooldown de 1 hora para no hacer spam si sigue escribiendo
                         setTimeout(() => dmCooldownCache.delete(remoteJid), 60 * 60 * 1000);
-                    } else {
-                        console.log(`[DEBUG] Ignorado: Usuario está en cooldown (${dmCooldownCache.has(remoteJid)}) o config.autoReplyMsg vacío.`);
                     }
                     continue; // No procesar comandos ni moderación en DMs
                 }
