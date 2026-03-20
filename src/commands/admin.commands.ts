@@ -1,5 +1,5 @@
 import { registerCommand, CommandContext } from './index';
-import { addWarning, getWarnings, getWarningCount, resetWarnings, addBan, removeBan } from '../services/db.service';
+import { addWarning, getWarnings, getWarningCount, resetWarnings, addBan, removeBan, getBannedUsers, muteUser, unmuteUser, isMuted, getMutedUntil } from '../services/db.service';
 import { config } from '../config';
 
 export function registerAdminCommands(): void {
@@ -59,6 +59,95 @@ export function registerAdminCommands(): void {
                     text: '❌ No pude banear al usuario. ¿Soy admin del grupo?',
                 });
             }
+        },
+    });
+
+    // ── !banlist ─────────────────────────────────────────────────
+    registerCommand({
+        name: 'banlist',
+        description: 'Lista todos los usuarios baneados del grupo',
+        usage: '!banlist',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            const bans = getBannedUsers(ctx.groupJid);
+            if (bans.length === 0) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '✅ No hay usuarios baneados en este grupo.',
+                });
+                return;
+            }
+
+            let text = `🚫 *Lista de Baneados (${bans.length})*\n\n`;
+            bans.forEach((b, i) => {
+                const number = b.user_jid.split('@')[0];
+                text += `${i + 1}. *${number}* (fecha: ${b.banned_at})\n`;
+            });
+
+            await ctx.sock.sendMessage(ctx.groupJid, { text });
+        },
+    });
+
+    // ── !mute @user Xm/Xh ────────────────────────────────────────
+    registerCommand({
+        name: 'mute',
+        description: 'Silenciar a un usuario temporalmente',
+        usage: '!mute @usuario 30m (m=minutos, h=horas)',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            const target = ctx.mentionedJids[0];
+            const timeRaw = ctx.args[1];
+
+            if (!target || !timeRaw) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Uso correcto: !mute @usuario 30m\nFormatos de tiempo: 30m (minutos), 2h (horas)',
+                });
+                return;
+            }
+
+            let ms = 0;
+            if (timeRaw.endsWith('m')) {
+                ms = parseInt(timeRaw) * 60 * 1000;
+            } else if (timeRaw.endsWith('h')) {
+                ms = parseInt(timeRaw) * 60 * 60 * 1000;
+            } else {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Formato de tiempo inválido. Usa "m" (minutos) o "h" (horas). Ej: 30m',
+                });
+                return;
+            }
+
+            if (isNaN(ms) || ms <= 0) return;
+
+            const mutedUntil = Date.now() + ms;
+            muteUser(ctx.groupJid, target, mutedUntil);
+
+            await ctx.sock.sendMessage(ctx.groupJid, {
+                text: `🔇 @${target.split('@')[0]} ha sido silenciado por ${timeRaw}.\nCualquier mensaje que envíe será eliminado automáticamente.`,
+                mentions: [target],
+            });
+        },
+    });
+
+    // ── !unmute @user ────────────────────────────────────────────
+    registerCommand({
+        name: 'unmute',
+        description: 'Quitar silencio a un usuario',
+        usage: '!unmute @usuario',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            const target = ctx.mentionedJids[0];
+            if (!target) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Debes mencionar al usuario.\nUso: !unmute @usuario',
+                });
+                return;
+            }
+
+            unmuteUser(ctx.groupJid, target);
+            await ctx.sock.sendMessage(ctx.groupJid, {
+                text: `🔊 @${target.split('@')[0]} ya no está silenciado y puede hablar de nuevo.`,
+                mentions: [target],
+            });
         },
     });
 

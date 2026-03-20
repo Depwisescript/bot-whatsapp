@@ -1,5 +1,6 @@
 import { WASocket } from '@whiskeysockets/baileys';
 import { isBanned } from '../services/db.service';
+import { invalidateGroupCache } from './message.handler';
 
 /**
  * Handle group participant updates (join/leave/promote/demote).
@@ -9,7 +10,7 @@ export function setupGroupHandler(sock: WASocket): void {
         const { id: groupJid, participants, action } = update;
 
         for (const participant of participants) {
-            const jid = participant.id;
+            const jid = typeof participant === 'string' ? participant : (participant as any).id;
 
             switch (action) {
                 case 'add': {
@@ -38,6 +39,13 @@ export function setupGroupHandler(sock: WASocket): void {
 
                 case 'remove': {
                     // No goodbye message
+                    break;
+                }
+
+                case 'promote':
+                case 'demote': {
+                    // Invalidate metadata cache so message handler updates admin check
+                    invalidateGroupCache(groupJid);
                     break;
                 }
 

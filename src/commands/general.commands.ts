@@ -1,5 +1,7 @@
 import { registerCommand, CommandContext, getAllCommands } from './index';
 import { config } from '../config';
+import { getWarnings, getWarningCount, isBanned } from '../services/db.service';
+import * as os from 'os';
 
 export function registerGeneralCommands(): void {
     // ── !help ────────────────────────────────────────────────────
@@ -18,7 +20,7 @@ export function registerGeneralCommands(): void {
             if (adminCmds.length > 0) {
                 text += '👑 *Comandos Admin:*\n';
                 adminCmds.forEach((cmd) => {
-                    text += `  • *${config.prefix}${cmd.name}* — ${cmd.description}\n    _${cmd.usage}_\n`;
+                    text += `  • *${config.prefix}${cmd.name}* — ${cmd.description}\n`;
                 });
                 text += '\n';
             }
@@ -28,7 +30,7 @@ export function registerGeneralCommands(): void {
             if (generalCmds.length > 0) {
                 text += '📌 *Comandos Generales:*\n';
                 generalCmds.forEach((cmd) => {
-                    text += `  • *${config.prefix}${cmd.name}* — ${cmd.description}\n    _${cmd.usage}_\n`;
+                    text += `  • *${config.prefix}${cmd.name}* — ${cmd.description}\n`;
                 });
             }
 
@@ -94,6 +96,90 @@ _Los admins están exentos de la moderación automática._`;
                     text: '❌ No pude obtener la información del grupo.',
                 });
             }
+        },
+    });
+
+    // ── !link ────────────────────────────────────────────────────
+    registerCommand({
+        name: 'link',
+        description: 'Obtener el enlace de invitación del grupo',
+        usage: '!link',
+        adminOnly: true, // Only admins should generate the link to avoid spam 
+        execute: async (ctx: CommandContext) => {
+            try {
+                const code = await ctx.sock.groupInviteCode(ctx.groupJid);
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `🔗 *Enlace de Invitación:*\nhttps://chat.whatsapp.com/${code}`,
+                });
+            } catch (err) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ No pude obtener el enlace. Asegúrate de que soy administrador del grupo.',
+                });
+            }
+        },
+    });
+
+    // ── !tagall ──────────────────────────────────────────────────
+    registerCommand({
+        name: 'tagall',
+        description: 'Mencionar a todos los miembros del grupo',
+        usage: '!tagall [mensaje opcional]',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            try {
+                const metadata = await ctx.sock.groupMetadata(ctx.groupJid);
+                const participants = metadata.participants.map(p => p.id);
+                
+                const customMessage = ctx.args.join(' ');
+                let text = `📢 *ATENCIÓN A TODOS*\n\n`;
+                if (customMessage) {
+                    text += `${customMessage}\n\n`;
+                }
+                
+                // Add invisible mentions trick or just list them
+                participants.forEach(jid => {
+                    text += `@${jid.split('@')[0]} `;
+                });
+
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text,
+                    mentions: participants,
+                });
+            } catch (err) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ Hubo un error al intentar mencionar a todos.',
+                });
+            }
+        },
+    });
+
+    // ── !status ──────────────────────────────────────────────────
+    registerCommand({
+        name: 'status',
+        description: 'Mostrar estado y estadísticas del bot',
+        usage: '!status',
+        adminOnly: true, // Visible to group admins, or owner
+        execute: async (ctx: CommandContext) => {
+            const uptimeMs = Date.now() - config.startTime;
+            const days = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((uptimeMs / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((uptimeMs / 1000 / 60) % 60);
+
+            const uptimeStr = `${days}d ${hours}h ${minutes}m`;
+            const memUsage = Math.round(process.memoryUsage().rss / 1024 / 1024);
+            const freeMem = Math.round(os.freemem() / 1024 / 1024);
+            const totalMem = Math.round(os.totalmem() / 1024 / 1024);
+
+            const text = `📊 *Estado del Bot (v1.1)*\n
+⏱️ *Uptime:* ${uptimeStr}
+💻 *Memoria RAM (Bot):* ${memUsage} MB
+🖥️ *Memoria Libre (VPS):* ${freeMem} / ${totalMem} MB
+🟢 *Entorno:* ${config.nodeEnv}
+
+🛡️ *Auto-Moderación:* Activa
+⚡ *Caché Groups:* Activo (5m TTL)`;
+
+            await ctx.sock.sendMessage(ctx.groupJid, { text });
         },
     });
 }

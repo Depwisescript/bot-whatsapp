@@ -24,4 +24,16 @@ export const config = {
 
     /** Max warnings before auto-kick */
     maxWarnings: 2,
+
+    /** Banned words (comma-separated in .env, e.g. "puta,mierda,hdp") */
+    bannedWords: (process.env.BANNED_WORDS || '')
+        .split(',')
+        .map((w) => w.trim().toLowerCase())
+        .filter(Boolean),
+
+    /** Group metadata cache TTL in milliseconds (5 minutes) */
+    metadataCacheTTL: 5 * 60 * 1000,
+
+    /** Bot start time for uptime tracking */
+    startTime: Date.now(),
 };

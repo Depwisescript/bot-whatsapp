@@ -1,6 +1,6 @@
 import { WASocket, proto } from '@whiskeysockets/baileys';
 import { config } from '../config';
-import { addWarning, getWarningCount } from '../services/db.service';
+import { addWarning, getWarningCount, resetWarnings } from '../services/db.service';
 
 // ── Anti-Spam: track message timestamps per user ──────────────
 const messageTimestamps = new Map<string, number[]>();
@@ -39,7 +39,7 @@ export interface ModerationResult {
     /** Whether the message violates rules */
     violation: boolean;
     /** Type of violation */
-    type: 'link' | 'spam' | 'sales' | null;
+    type: 'link' | 'spam' | 'sales' | 'badword' | null;
     /** Reason description */
     reason: string;
 }
@@ -60,8 +60,24 @@ export function checkMessage(body: string, senderJid: string, groupJid: string):
         }
     }
 
-    // ── Check sales/promotion ──
     const lowerBody = body.toLowerCase();
+
+    // ── Check banned words ──
+    if (config.bannedWords.length > 0) {
+        for (const word of config.bannedWords) {
+            // Match whole word using word boundary-like check
+            const regex = new RegExp(`(^|\\s|[^a-záéíóúñ])${escapeRegex(word)}($|\\s|[^a-záéíóúñ])`, 'i');
+            if (regex.test(lowerBody)) {
+                return {
+                    violation: true,
+                    type: 'badword',
+                    reason: `Palabra prohibida detectada`,
+                };
+            }
+        }
+    }
+
+    // ── Check sales/promotion ──
     const hasSalesKeyword = SALES_KEYWORDS.some((kw) => lowerBody.includes(kw));
     const hasContact = CONTACT_PATTERNS.some((pattern) => pattern.test(body));
 
@@ -100,7 +116,7 @@ export function checkMessage(body: string, senderJid: string, groupJid: string):
 /**
  * Handle a moderation violation:
  * - Strike 1: delete message + send warning
- * - Strike 2: delete message + kick user
+ * - Strike 2: delete message + kick user + reset warnings
  */
 export async function handleViolation(
     sock: WASocket,
@@ -131,6 +147,8 @@ export async function handleViolation(
                 text: `🚨 @${senderJid.split('@')[0]} ha sido expulsado del grupo.\n\n📋 Razón: ${result.reason}\n⚠️ Advertencias: ${warningCount}/${config.maxWarnings}\n\n_Ha alcanzado el límite de advertencias._`,
                 mentions: [senderJid],
             });
+            // Reset warnings after kick so if re-added they start fresh
+            resetWarnings(groupJid, senderJid);
         } catch (err) {
             console.error('Error kicking user:', err);
         }
@@ -158,4 +176,11 @@ export function cleanupSpamTracker(): void {
             messageTimestamps.set(key, recent);
         }
     }
+}
+
+/**
+ * Escape special regex characters in a string.
+ */
+function escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

@@ -48,11 +48,17 @@ npm run dev
 | `!kick @user` | Expulsar miembro |
 | `!ban @user` | Expulsar + banear permanente |
 | `!unban @user` | Quitar ban permanente |
+| `!banlist` | Ver lista de baneados |
+| `!mute @user Xm` | Silenciar usuario X minutos/horas |
+| `!unmute @user` | Des-silenciar usuario |
 | `!warn @user [razón]` | Dar advertencia manual |
 | `!warnings @user` | Ver advertencias |
 | `!resetwarn @user` | Resetear advertencias |
 | `!promote @user` | Hacer admin |
 | `!demote @user` | Quitar admin |
+| `!link` | Ver enlace de invitación |
+| `!tagall [msg]` | Mencionar a todos |
+| `!status` | Estado y uso de memoria del bot |
 
 ### Generales (todos)
 | Comando | Descripción |

@@ -1,7 +1,38 @@
-import { WASocket, proto } from '@whiskeysockets/baileys';
+import { WASocket, proto, GroupMetadata } from '@whiskeysockets/baileys';
 import { config } from '../config';
 import { getCommand, CommandContext } from '../commands/index';
 import { checkMessage, handleViolation } from './moderation.handler';
+import { isMuted } from '../services/db.service';
+
+// ── Group metadata cache ─────────────────────────────────────────
+interface CachedMetadata {
+    data: GroupMetadata;
+    timestamp: number;
+}
+const metadataCache = new Map<string, CachedMetadata>();
+
+/**
+ * Get group metadata with caching (5 min TTL).
+ */
+export async function getCachedGroupMetadata(sock: WASocket, groupJid: string): Promise<GroupMetadata> {
+    const cached = metadataCache.get(groupJid);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp) < config.metadataCacheTTL) {
+        return cached.data;
+    }
+
+    const metadata = await sock.groupMetadata(groupJid);
+    metadataCache.set(groupJid, { data: metadata, timestamp: now });
+    return metadata;
+}
+
+/**
+ * Force refresh the cache for a specific group (used after promote/demote).
+ */
+export function invalidateGroupCache(groupJid: string): void {
+    metadataCache.delete(groupJid);
+}
 
 /**
  * Extract the text body from a message (handles different message types).
@@ -33,11 +64,11 @@ function getMentionedJids(message: proto.IWebMessageInfo): string[] {
 }
 
 /**
- * Check if a JID is a group admin.
+ * Check if a JID is a group admin (uses cache).
  */
 async function isGroupAdmin(sock: WASocket, groupJid: string, userJid: string): Promise<boolean> {
     try {
-        const metadata = await sock.groupMetadata(groupJid);
+        const metadata = await getCachedGroupMetadata(sock, groupJid);
         const participant = metadata.participants.find((p) => p.id === userJid);
         return participant?.admin === 'admin' || participant?.admin === 'superadmin';
     } catch {
@@ -81,13 +112,27 @@ export function setupMessageHandler(sock: WASocket): void {
                 if (!senderJid) continue;
 
                 const body = getMessageBody(message);
-                if (!body) continue;
 
                 // Check if sender is admin
                 const isAdmin = await isGroupAdmin(sock, groupJid, senderJid);
                 const isOwner = config.ownerNumber
                     ? senderJid.includes(config.ownerNumber)
                     : false;
+
+                // ── Mute check: delete messages from muted users ──
+                if (!isAdmin && !isOwner && isMuted(groupJid, senderJid)) {
+                    try {
+                        if (message.key) {
+                            await sock.sendMessage(groupJid, {
+                                delete: message.key as proto.IMessageKey,
+                            });
+                        }
+                    } catch { /* ignore delete errors for muted */ }
+                    continue;
+                }
+
+                // Skip empty-body messages (images without caption, stickers, etc.)
+                if (!body) continue;
 
                 // ── Auto-moderation (skip for admins and owner) ──
                 if (!isAdmin && !isOwner) {
