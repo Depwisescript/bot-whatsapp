@@ -52,7 +52,8 @@ export async function generateAIImage(prompt: string): Promise<Buffer | null> {
     try {
         // Pollinations.ai requires dummy parameters to bypass cache or ratelimits.
         const seed = Math.floor(Math.random() * 99999);
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&enhance=true&seed=${seed}`;
+        // Using model=flux routes to a fresh, less-overloaded rendering node, resolving 500 Internal Server errors
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&enhance=true&seed=${seed}&model=flux&width=512&height=512`;
         
         // Sometimes Cloudflare/WAF block simple Node fetch causing 500 or 403. 
         // We add a realistic User-Agent to masquerade as a real browser visit.
