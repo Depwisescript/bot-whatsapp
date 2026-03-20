@@ -6,7 +6,7 @@ const genAI = config.geminiApiKey ? new GoogleGenerativeAI(config.geminiApiKey) 
 
 // Use the flash model which is faster and great for chat
 const model = genAI?.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash',
     systemInstruction: `Eres "Depwise AI", un asistente inteligente para grupos de WhatsApp.
 Actúas de manera amigable, útil y directa. Tus respuestas deben ser cortas, claras y fáciles de leer en un chat de WhatsApp (usa viñetas y formato). 
 Utiliza emojis apropiados para darle personalidad, pero sin excederte.
