@@ -126,16 +126,24 @@ export function setupMessageHandler(sock: WASocket): void {
 
                 // ── Auto-reply for Direct Messages (DMs) ──
                 if (remoteJid.endsWith('@s.whatsapp.net')) {
+                    console.log(`[DEBUG] Recibido DM de: ${remoteJid} | Body: "${body}" | fromMe: ${message.key.fromMe}`);
+                    
                     // Ignore empty messages (protocol messages, typing indicators, key syncs)
-                    if (!body) continue;
+                    if (!body) {
+                        console.log(`[DEBUG] Ignorado: Mensaje vacío / de protocolo.`);
+                        continue;
+                    }
 
                     // Solo responder si no está en cooldown
                     if (!dmCooldownCache.has(remoteJid) && config.autoReplyMsg) {
+                        console.log(`[DEBUG] Respondiendo a ${remoteJid} con autoReplyMsg.`);
                         dmCooldownCache.add(remoteJid);
                         await sock.sendMessage(remoteJid, { text: config.autoReplyMsg });
                         
                         // Cooldown de 1 hora para no hacer spam si sigue escribiendo
                         setTimeout(() => dmCooldownCache.delete(remoteJid), 60 * 60 * 1000);
+                    } else {
+                        console.log(`[DEBUG] Ignorado: Usuario está en cooldown (${dmCooldownCache.has(remoteJid)}) o config.autoReplyMsg vacío.`);
                     }
                     continue; // No procesar comandos ni moderación en DMs
                 }
