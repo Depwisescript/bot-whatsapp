@@ -19,6 +19,8 @@ export interface CommandContext {
     quotedMessageId?: string;
     /** The sender JID of the quoted message, if any */
     quotedParticipant?: string;
+    /** The text content of the quoted message, if any */
+    quotedMessageBody?: string;
     /** Whether the sender is a group admin */
     isAdmin: boolean;
     /** Whether the sender is the bot owner */

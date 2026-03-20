@@ -1,6 +1,7 @@
 import { registerCommand, CommandContext, getAllCommands } from './index';
 import { config } from '../config';
 import { getWarnings, getWarningCount, isBanned } from '../services/db.service';
+import { generateAIResponse } from '../services/ai.service';
 import * as os from 'os';
 
 export function registerGeneralCommands(): void {
@@ -180,6 +181,41 @@ _Los admins están exentos de la moderación automática._`;
 ⚡ *Caché Groups:* Activo (5m TTL)`;
 
             await ctx.sock.sendMessage(ctx.groupJid, { text });
+        },
+    });
+
+    // ── !ia ──────────────────────────────────────────────────────
+    registerCommand({
+        name: 'ia',
+        description: 'Hablar con la inteligencia artificial (Gemini)',
+        usage: '!ia [tu pregunta] (también puedes responder a un mensaje con !ia)',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            const prompt = ctx.args.join(' ');
+
+            if (!prompt && !ctx.quotedMessageBody) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Debes escribir una pregunta o responder a un mensaje.\nUso: !ia ¿Qué es la física cuántica?',
+                });
+                return;
+            }
+
+            // Optional loading placeholder (simulating "typing")
+            await ctx.sock.presenceSubscribe(ctx.groupJid);
+            await ctx.sock.sendPresenceUpdate('composing', ctx.groupJid);
+
+            try {
+                const response = await generateAIResponse(
+                    prompt || "Explícame de qué trata o qué significa este mensaje citado de forma breve.",
+                    ctx.quotedMessageBody
+                );
+
+                await ctx.sock.sendMessage(ctx.groupJid, { text: response });
+            } catch (err) {
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ Ocurrió un error al contactar al cerebro de IA.' });
+            } finally {
+                await ctx.sock.sendPresenceUpdate('paused', ctx.groupJid);
+            }
         },
     });
 }

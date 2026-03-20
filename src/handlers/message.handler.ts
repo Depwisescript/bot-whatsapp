@@ -35,10 +35,9 @@ export function invalidateGroupCache(groupJid: string): void {
 }
 
 /**
- * Extract the text body from a message (handles different message types).
+ * Extract the text body from an IMessage.
  */
-function getMessageBody(message: proto.IWebMessageInfo): string {
-    const msg = message.message;
+function getMessageBodyFromMsg(msg: proto.IMessage | null | undefined): string {
     if (!msg) return '';
 
     return (
@@ -49,6 +48,13 @@ function getMessageBody(message: proto.IWebMessageInfo): string {
         msg.documentMessage?.caption ||
         ''
     );
+}
+
+/**
+ * Extract the text body from a WebMessageInfo (handles different message types).
+ */
+function getMessageBody(message: proto.IWebMessageInfo): string {
+    return getMessageBodyFromMsg(message.message);
 }
 
 /**
@@ -202,6 +208,7 @@ export function setupMessageHandler(sock: WASocket): void {
                     mentionedJids: getMentionedJids(message),
                     quotedMessageId: contextInfo?.stanzaId || undefined,
                     quotedParticipant: contextInfo?.participant || undefined,
+                    quotedMessageBody: getMessageBodyFromMsg(contextInfo?.quotedMessage),
                     isAdmin,
                     isOwner,
                 };
