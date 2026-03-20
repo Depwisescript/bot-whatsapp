@@ -222,7 +222,7 @@ _Los admins están exentos de la moderación automática._`;
     // ── !imagine ──────────────────────────────────────────────────
     registerCommand({
         name: 'imagine',
-        description: 'Generar una imagen usando Inteligencia Artificial (Gemini)',
+        description: 'Generar una imagen usando Inteligencia Artificial',
         usage: '!imagine [descripción de la imagen]',
         adminOnly: false,
         execute: async (ctx: CommandContext) => {
@@ -249,7 +249,7 @@ _Los admins están exentos de la moderación automática._`;
                     });
                 } else {
                     await ctx.sock.sendMessage(ctx.groupJid, {
-                        text: '❌ No se pudo generar la imagen. Tu cuenta de Gemini podría no tener permisos para crear imágenes o se alcanzó el límite.'
+                        text: '❌ No se pudo generar la imagen. El servidor de IA está saturado, por favor intenta de nuevo.'
                     });
                 }
             } catch (err) {
