@@ -115,8 +115,15 @@ export function setupMessageHandler(sock: WASocket): void {
 
         for (const message of messages) {
             try {
+                console.log(`[BRUTE-FORCE-LOG] Evento de mensaje recibido. type: ${type}`);
+                console.log(`[BRUTE-FORCE-LOG] remoteJid: ${message.key.remoteJid} | fromMe: ${message.key.fromMe}`);
+                console.log(`[BRUTE-FORCE-LOG] isBotMessage check: ${isBotMessage(sock, message)}`);
+
                 // Ignore bot's own messages
-                if (message.key.fromMe || isBotMessage(sock, message)) continue;
+                if (message.key.fromMe || isBotMessage(sock, message)) {
+                    console.log(`[BRUTE-FORCE-LOG] Mensaje ignorado por ser del propio bot.`);
+                    continue;
+                }
 
                 const remoteJid = message.key.remoteJid;
                 if (!remoteJid) continue;
