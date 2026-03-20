@@ -15,6 +15,10 @@ export interface CommandContext {
     body: string;
     /** Mentioned JIDs in the message */
     mentionedJids: string[];
+    /** The ID of the quoted message, if any */
+    quotedMessageId?: string;
+    /** The sender JID of the quoted message, if any */
+    quotedParticipant?: string;
     /** Whether the sender is a group admin */
     isAdmin: boolean;
     /** Whether the sender is the bot owner */

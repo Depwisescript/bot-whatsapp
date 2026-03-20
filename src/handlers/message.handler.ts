@@ -52,15 +52,21 @@ function getMessageBody(message: proto.IWebMessageInfo): string {
 }
 
 /**
- * Get mentioned JIDs from a message.
+ * Get mentioned JIDs from a message, including the sender of a quoted message if present.
  */
 function getMentionedJids(message: proto.IWebMessageInfo): string[] {
     const msg = message.message;
     if (!msg) return [];
 
-    return (
-        msg.extendedTextMessage?.contextInfo?.mentionedJid || []
-    );
+    const jids = [...(msg.extendedTextMessage?.contextInfo?.mentionedJid || [])];
+    const quotedParticipant = msg.extendedTextMessage?.contextInfo?.participant;
+    
+    // Si se está respondiendo a un mensaje, agregar al autor del mensaje a los mencionados
+    if (quotedParticipant && !jids.includes(quotedParticipant)) {
+        jids.push(quotedParticipant);
+    }
+
+    return jids;
 }
 
 /**
@@ -185,6 +191,7 @@ export function setupMessageHandler(sock: WASocket): void {
                 }
 
                 // Build context and execute
+                const contextInfo = message.message?.extendedTextMessage?.contextInfo;
                 const ctx: CommandContext = {
                     sock,
                     message,
@@ -193,6 +200,8 @@ export function setupMessageHandler(sock: WASocket): void {
                     args,
                     body,
                     mentionedJids: getMentionedJids(message),
+                    quotedMessageId: contextInfo?.stanzaId || undefined,
+                    quotedParticipant: contextInfo?.participant || undefined,
                     isAdmin,
                     isOwner,
                 };

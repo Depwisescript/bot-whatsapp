@@ -58,6 +58,7 @@ npm run dev
 | `!demote @user` | Quitar admin |
 | `!link` | Ver enlace de invitación |
 | `!tagall [msg]` | Mencionar a todos |
+| `!del` | Eliminar mensaje (respondiendo) |
 | `!status` | Estado y uso de memoria del bot |
 
 ### Generales (todos)

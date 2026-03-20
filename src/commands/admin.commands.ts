@@ -347,4 +347,36 @@ export function registerAdminCommands(): void {
             }
         },
     });
+
+    // ── !del ─────────────────────────────────────────────────────
+    registerCommand({
+        name: 'del',
+        description: 'Eliminar un mensaje respondiendo a él',
+        usage: '!del (respondiendo al mensaje)',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            if (!ctx.quotedMessageId || !ctx.quotedParticipant) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Debes responder a un mensaje específico con !del para eliminarlo.',
+                });
+                return;
+            }
+
+            try {
+                const botJid = ctx.sock.user?.id ? ctx.sock.user.id.split(':')[0] + '@s.whatsapp.net' : '';
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    delete: {
+                        remoteJid: ctx.groupJid,
+                        fromMe: ctx.quotedParticipant === botJid,
+                        id: ctx.quotedMessageId,
+                        participant: ctx.quotedParticipant
+                    }
+                });
+            } catch (err) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ No pude eliminar el mensaje. ¿Tengo permisos de administrador?',
+                });
+            }
+        },
+    });
 }
