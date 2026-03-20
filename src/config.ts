@@ -11,7 +11,7 @@ export const config = {
     autoReplyMsg: process.env.AUTO_REPLY_MSG || 'Hola 👋\nEste es un bot de administración de grupos.\n\nPara ventas o consultas directas, por favor contáctame a mi número principal:\n📱 wa.me/51956815890',
 
     /** Gemini API Key for answering queries */
-    geminiApiKey: process.env.GEMINI_API_KEY || '',
+    geminiApiKey: process.env.GEMINI_API_KEY || 'PEGA_TU_API_KEY_AQUI',
 
     /** Node environment */
     nodeEnv: process.env.NODE_ENV || 'development',
