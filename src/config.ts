@@ -7,6 +7,9 @@ export const config = {
     /** Owner phone number (country code + number, no + or spaces) */
     ownerNumber: process.env.OWNER_NUMBER || '',
 
+    /** Mensaje de respuesta automática para mensajes privados (DMs) */
+    autoReplyMsg: process.env.AUTO_REPLY_MSG || 'Hola 👋\nEste es un bot de administración de grupos.\n\nPara ventas o consultas directas, por favor contáctame a mi número principal:\n📱 wa.me/51956815890',
+
     /** Node environment */
     nodeEnv: process.env.NODE_ENV || 'development',
 

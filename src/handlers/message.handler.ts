@@ -91,6 +91,9 @@ function isBotMessage(sock: WASocket, message: proto.IWebMessageInfo): boolean {
     return normalizedBot === normalizedSender;
 }
 
+// Cache for DM autoreply cooldown to prevent spamming
+const dmCooldownCache = new Set<string>();
+
 /**
  * Set up the message handler.
  */
@@ -103,9 +106,24 @@ export function setupMessageHandler(sock: WASocket): void {
                 // Ignore bot's own messages
                 if (message.key.fromMe || isBotMessage(sock, message)) continue;
 
-                // Only process group messages
                 const remoteJid = message.key.remoteJid;
-                if (!remoteJid || !remoteJid.endsWith('@g.us')) continue;
+                if (!remoteJid) continue;
+
+                // ── Auto-reply for Direct Messages (DMs) ──
+                if (remoteJid.endsWith('@s.whatsapp.net')) {
+                    // Solo responder si no está en cooldown
+                    if (!dmCooldownCache.has(remoteJid) && config.autoReplyMsg) {
+                        dmCooldownCache.add(remoteJid);
+                        await sock.sendMessage(remoteJid, { text: config.autoReplyMsg });
+                        
+                        // Cooldown de 1 hora para no hacer spam si sigue escribiendo
+                        setTimeout(() => dmCooldownCache.delete(remoteJid), 60 * 60 * 1000);
+                    }
+                    continue; // No procesar comandos ni moderación en DMs
+                }
+
+                // Only process group messages
+                if (!remoteJid.endsWith('@g.us')) continue;
 
                 const groupJid = remoteJid;
                 const senderJid = message.key.participant || '';
