@@ -50,12 +50,19 @@ export async function generateAIResponse(prompt: string, context?: string): Prom
  */
 export async function generateAIImage(prompt: string): Promise<Buffer | null> {
     try {
-        // Pollinations.ai is a fantastic free API that wraps Stable Diffusion
-        // Adding a random seed ensures we bypass any server 500 caches and forces a fresh generation
+        // Pollinations.ai requires dummy parameters to bypass cache or ratelimits.
         const seed = Math.floor(Math.random() * 99999);
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&enhance=true&seed=${seed}&width=512&height=512`;
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&enhance=true&seed=${seed}`;
         
-        const response = await fetch(url);
+        // Sometimes Cloudflare/WAF block simple Node fetch causing 500 or 403. 
+        // We add a realistic User-Agent to masquerade as a real browser visit.
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+            }
+        });
 
         if (!response.ok) {
             console.error(`[IMAGE-DEBUG] Pollinations Error: ${response.status} ${response.statusText}`);
