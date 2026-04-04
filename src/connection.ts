@@ -12,6 +12,7 @@ import { initCommands } from './commands/index';
 import { setupMessageHandler } from './handlers/message.handler';
 import { setupGroupHandler } from './handlers/group.handler';
 import { cleanupSpamTracker } from './handlers/moderation.handler';
+import { startPanel } from './panel/panel';
 
 const logger = pino({ level: 'silent' });
 
@@ -20,6 +21,9 @@ initCommands();
 
 // Cleanup spam tracker every 60 seconds
 setInterval(cleanupSpamTracker, 60_000);
+
+// Start the admin panel (only once)
+let panelStarted = false;
 
 export async function startBot(): Promise<void> {
     const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
@@ -69,6 +73,14 @@ export async function startBot(): Promise<void> {
             console.log('║  🛡️  Auto-moderación activa          ║');
             console.log('╚══════════════════════════════════════╝');
             console.log('');
+
+            // Start the panel on first successful connection
+            if (!panelStarted) {
+                panelStarted = true;
+                try { startPanel(); } catch (err) {
+                    console.error('Error starting panel:', err);
+                }
+            }
         }
     });
 

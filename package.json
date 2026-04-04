@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npx shx mkdir -p dist/panel/views && npx shx cp src/panel/views/index.html dist/panel/views/index.html",
     "start": "node dist/index.js"
   },
   "keywords": [
@@ -21,11 +21,15 @@
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "better-sqlite3": "^12.8.0",
     "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
     "pino": "^10.3.1",
     "qrcode-terminal": "^0.12.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.5.0",
     "@types/qrcode-terminal": "^0.12.2",
     "tsx": "^4.21.0",

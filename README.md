@@ -67,6 +67,7 @@ npm run dev
 | `!help` | Lista de comandos |
 | `!rules` | Reglas del grupo |
 | `!info` | Información del grupo |
+| `!ia [pregunta]` | Hablar con inteligencia artificial Gemini |
 
 ## 🛡️ Auto-Moderación
 

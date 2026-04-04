@@ -21,6 +21,8 @@ export interface CommandContext {
     quotedParticipant?: string;
     /** The text content of the quoted message, if any */
     quotedMessageBody?: string;
+    /** The full quoted message object (for downloading media) */
+    quotedMessage?: proto.IMessage | null;
     /** Whether the sender is a group admin */
     isAdmin: boolean;
     /** Whether the sender is the bot owner */

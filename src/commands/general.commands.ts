@@ -259,4 +259,153 @@ _Los admins están exentos de la moderación automática._`;
             }
         },
     });
+
+    // ── !archivo [nombre] ───────────────────────────────────────
+    registerCommand({
+        name: 'archivo',
+        description: 'Descargar un archivo compartido del grupo',
+        usage: '!archivo [nombre] (o solo !archivo si hay uno)',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            const { listSharedFiles, getSharedFile, getSingleFile, readFileBuffer, countSharedFiles } = await import('../services/file.service');
+
+            const name = ctx.args[0];
+
+            // If no name provided, check if there's only one file
+            if (!name) {
+                const fileCount = countSharedFiles(ctx.groupJid);
+
+                if (fileCount === 0) {
+                    await ctx.sock.sendMessage(ctx.groupJid, {
+                        text: '📭 No hay archivos disponibles en este grupo.',
+                    });
+                    return;
+                }
+
+                if (fileCount === 1) {
+                    // Auto-send the only file
+                    const file = getSingleFile(ctx.groupJid);
+                    if (file) {
+                        const buffer = readFileBuffer(file.file_path);
+                        if (buffer) {
+                            await ctx.sock.sendMessage(ctx.groupJid, {
+                                document: buffer,
+                                mimetype: file.mime_type,
+                                fileName: file.original_name,
+                                caption: `📥 *${file.name}* — ${file.original_name}`,
+                            });
+                            return;
+                        }
+                    }
+                    await ctx.sock.sendMessage(ctx.groupJid, {
+                        text: '❌ Error al leer el archivo del servidor.',
+                    });
+                    return;
+                }
+
+                // Multiple files, show list
+                const files = listSharedFiles(ctx.groupJid);
+                let text = `📁 *Archivos Disponibles (${files.length})*\n\n`;
+                files.forEach((f, i) => {
+                    text += `${i + 1}. 📄 *${f.name}*\n`;
+                });
+                text += `\n💡 Usa: *!archivo [nombre]* para descargar`;
+
+                await ctx.sock.sendMessage(ctx.groupJid, { text });
+                return;
+            }
+
+            // Get specific file by name
+            const file = getSharedFile(name, ctx.groupJid);
+            if (!file) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `❌ No se encontró un archivo con el nombre *${name}*.\nUsa *!archivo* para ver la lista.`,
+                });
+                return;
+            }
+
+            const buffer = readFileBuffer(file.file_path);
+            if (!buffer) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ El archivo existe en la base de datos pero no se pudo leer del disco.',
+                });
+                return;
+            }
+
+            await ctx.sock.sendMessage(ctx.groupJid, {
+                document: buffer,
+                mimetype: file.mime_type,
+                fileName: file.original_name,
+                caption: `📥 *${file.name}* — ${file.original_name}`,
+            });
+        },
+    });
+
+    // ── !entel ──────────────────────────────────────────────────
+    registerCommand({
+        name: 'entel',
+        description: 'Descargar archivo de configuración Entel',
+        usage: '!entel',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            const { getSharedFile, getSharedFileGlobal, readFileBuffer } = await import('../services/file.service');
+
+            const file = getSharedFile('entel', ctx.groupJid) || getSharedFileGlobal('entel');
+            if (!file) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '📭 Aún no se ha subido el archivo de *Entel*.\n\n👑 _Un admin puede subirlo respondiendo a un archivo con:_\n*!setarchivo entel*',
+                });
+                return;
+            }
+
+            const buffer = readFileBuffer(file.file_path);
+            if (!buffer) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ Error al leer el archivo de Entel del servidor.',
+                });
+                return;
+            }
+
+            await ctx.sock.sendMessage(ctx.groupJid, {
+                document: buffer,
+                mimetype: file.mime_type,
+                fileName: file.original_name,
+                caption: `📥 *Entel* — ${file.original_name}\n📱 Archivo de configuración Entel`,
+            });
+        },
+    });
+
+    // ── !bitel ──────────────────────────────────────────────────
+    registerCommand({
+        name: 'bitel',
+        description: 'Descargar archivo de configuración Bitel',
+        usage: '!bitel',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            const { getSharedFile, getSharedFileGlobal, readFileBuffer } = await import('../services/file.service');
+
+            const file = getSharedFile('bitel', ctx.groupJid) || getSharedFileGlobal('bitel');
+            if (!file) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '📭 Aún no se ha subido el archivo de *Bitel*.\n\n👑 _Un admin puede subirlo respondiendo a un archivo con:_\n*!setarchivo bitel*',
+                });
+                return;
+            }
+
+            const buffer = readFileBuffer(file.file_path);
+            if (!buffer) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ Error al leer el archivo de Bitel del servidor.',
+                });
+                return;
+            }
+
+            await ctx.sock.sendMessage(ctx.groupJid, {
+                document: buffer,
+                mimetype: file.mime_type,
+                fileName: file.original_name,
+                caption: `📥 *Bitel* — ${file.original_name}\n📱 Archivo de configuración Bitel`,
+            });
+        },
+    });
 }

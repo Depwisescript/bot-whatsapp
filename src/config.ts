@@ -42,4 +42,16 @@ export const config = {
 
     /** Bot start time for uptime tracking */
     startTime: Date.now(),
+
+    /** Files directory for shared files */
+    filesDir: './data/files',
+
+    /** Panel web port */
+    panelPort: parseInt(process.env.PANEL_PORT || '3001', 10),
+
+    /** Panel admin username */
+    panelUser: process.env.PANEL_USER || 'admin',
+
+    /** Panel admin password */
+    panelPass: process.env.PANEL_PASS || '',
 };

@@ -379,4 +379,156 @@ export function registerAdminCommands(): void {
             }
         },
     });
+
+    // ── !setarchivo [nombre] ────────────────────────────────────
+    registerCommand({
+        name: 'setarchivo',
+        description: 'Subir un archivo compartido (responde a un documento)',
+        usage: '!setarchivo [nombre] (respondiendo a un archivo)',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            const name = ctx.args[0];
+            if (!name) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Debes especificar un nombre para el archivo.\nUso: Responde a un documento con *!setarchivo vpn_config*',
+                });
+                return;
+            }
+
+            if (!ctx.quotedMessage) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Debes *responder a un documento/imagen* con este comando.\n\n📋 *Pasos:*\n1. Envía el archivo al grupo\n2. Responde a ese mensaje con: *!setarchivo ' + name + '*',
+                });
+                return;
+            }
+
+            // Detect the media type from quoted message
+            const quotedMsg = ctx.quotedMessage;
+            const mediaMsg = quotedMsg.documentMessage || quotedMsg.imageMessage || 
+                           quotedMsg.videoMessage || quotedMsg.audioMessage;
+
+            if (!mediaMsg) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ El mensaje citado no contiene un archivo descargable (documento, imagen, video o audio).',
+                });
+                return;
+            }
+
+            await ctx.sock.sendMessage(ctx.groupJid, {
+                text: '⏳ Descargando archivo...',
+            });
+
+            try {
+                const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
+
+                // Build a minimal message structure for downloadMediaMessage
+                const msgType = quotedMsg.documentMessage ? 'documentMessage' 
+                    : quotedMsg.imageMessage ? 'imageMessage'
+                    : quotedMsg.videoMessage ? 'videoMessage'
+                    : 'audioMessage';
+
+                const fakeMsg = {
+                    key: ctx.message.key,
+                    message: { [msgType]: mediaMsg },
+                };
+
+                const buffer = await downloadMediaMessage(
+                    fakeMsg as any,
+                    'buffer',
+                    {},
+                    {
+                        logger: undefined as any,
+                        reuploadRequest: ctx.sock.updateMediaMessage,
+                    }
+                );
+
+                const originalName = (quotedMsg.documentMessage?.fileName) || `${name}.bin`;
+                const mimeType = mediaMsg.mimetype || 'application/octet-stream';
+
+                const { saveSharedFile } = await import('../services/file.service');
+                const savedFile = saveSharedFile(
+                    name,
+                    originalName,
+                    mimeType,
+                    buffer as Buffer,
+                    ctx.groupJid,
+                    ctx.senderJid
+                );
+
+                const sizeKB = Math.round(savedFile.size / 1024);
+                const sizeMB = (savedFile.size / (1024 * 1024)).toFixed(2);
+                const sizeStr = savedFile.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `✅ *Archivo guardado exitosamente*\n\n📄 *Nombre:* ${savedFile.name}\n📎 *Original:* ${savedFile.original_name}\n📦 *Tamaño:* ${sizeStr}\n\n👥 Cualquier miembro puede descargarlo con:\n*!archivo ${savedFile.name}*`,
+                });
+            } catch (err) {
+                console.error('Error downloading/saving file:', err);
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ Error al descargar o guardar el archivo. Intenta de nuevo.',
+                });
+            }
+        },
+    });
+
+    // ── !delarchivo [nombre] ────────────────────────────────────
+    registerCommand({
+        name: 'delarchivo',
+        description: 'Eliminar un archivo compartido',
+        usage: '!delarchivo [nombre]',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            const name = ctx.args[0];
+            if (!name) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Debes especificar el nombre del archivo a eliminar.\nUso: !delarchivo vpn_config',
+                });
+                return;
+            }
+
+            const { deleteSharedFile } = await import('../services/file.service');
+            const deleted = deleteSharedFile(name, ctx.groupJid);
+
+            if (deleted) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `🗑️ Archivo *${name}* eliminado exitosamente.`,
+                });
+            } else {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `❌ No se encontró un archivo con el nombre *${name}*.`,
+                });
+            }
+        },
+    });
+
+    // ── !archivos ───────────────────────────────────────────────
+    registerCommand({
+        name: 'archivos',
+        description: 'Listar todos los archivos compartidos',
+        usage: '!archivos',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            const { listSharedFiles } = await import('../services/file.service');
+            const files = listSharedFiles(ctx.groupJid);
+
+            if (files.length === 0) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '📭 No hay archivos compartidos en este grupo.\n\nUsa *!setarchivo [nombre]* respondiendo a un archivo para agregar uno.',
+                });
+                return;
+            }
+
+            let text = `📁 *Archivos Compartidos (${files.length})*\n\n`;
+            files.forEach((f, i) => {
+                const sizeKB = Math.round(f.size / 1024);
+                const sizeMB = (f.size / (1024 * 1024)).toFixed(1);
+                const sizeStr = f.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+                text += `${i + 1}. 📄 *${f.name}* (${sizeStr})\n   📎 ${f.original_name}\n   📅 ${f.created_at}\n\n`;
+            });
+
+            text += `💡 Descarga: *!archivo [nombre]*\n🗑️ Eliminar: *!delarchivo [nombre]*`;
+
+            await ctx.sock.sendMessage(ctx.groupJid, { text });
+        },
+    });
 }

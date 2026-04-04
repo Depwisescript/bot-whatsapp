@@ -214,6 +214,7 @@ export function setupMessageHandler(sock: WASocket): void {
                     quotedMessageId: contextInfo?.stanzaId || undefined,
                     quotedParticipant: contextInfo?.participant || undefined,
                     quotedMessageBody: getMessageBodyFromMsg(contextInfo?.quotedMessage),
+                    quotedMessage: contextInfo?.quotedMessage || null,
                     isAdmin,
                     isOwner,
                 };
