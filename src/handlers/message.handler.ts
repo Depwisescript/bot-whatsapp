@@ -186,28 +186,53 @@ export function setupMessageHandler(sock: WASocket): void {
                     if (botId) {
                         const botNumber = botId.split(':')[0];
                         const botJidNorm = botNumber + '@s.whatsapp.net';
+                        const botLid = (sock.user as any)?.lid || '';
 
-                        const ctxInfo = message.message?.extendedTextMessage?.contextInfo;
+                        // Extract contextInfo from any message type
+                        const msg = message.message;
+                        const ctxInfo = msg?.extendedTextMessage?.contextInfo
+                            || msg?.imageMessage?.contextInfo
+                            || msg?.videoMessage?.contextInfo
+                            || msg?.documentMessage?.contextInfo
+                            || msg?.audioMessage?.contextInfo;
+
                         const quotedSender = ctxInfo?.participant || '';
 
+                        // Debug: log to see actual JID formats
+                        if (quotedSender) {
+                            console.log(`[AUTO-AI DEBUG] botId=${botId} botLid=${botLid} quotedSender=${quotedSender}`);
+                        }
+
                         // Check if replying to a bot message
+                        // Support: standard JID, device suffix, and LID format
+                        const quotedSenderNumber = quotedSender.split(':')[0].split('@')[0];
                         const isReplyToBot = !!quotedSender && (
                             quotedSender === botJidNorm ||
-                            quotedSender.startsWith(botNumber + ':')
+                            quotedSender.startsWith(botNumber + ':') ||
+                            quotedSenderNumber === botNumber ||
+                            (botLid && (quotedSender === botLid || quotedSender.startsWith(botLid.split(':')[0] + ':')))
                         );
 
                         // Check if bot is @mentioned
                         const mentions = ctxInfo?.mentionedJid || [];
-                        const isMentioningBot = mentions.some(jid =>
-                            jid === botJidNorm || jid.startsWith(botNumber + ':')
-                        );
+                        const isMentioningBot = mentions.some(jid => {
+                            const jidNumber = jid.split(':')[0].split('@')[0];
+                            return jid === botJidNorm || jid.startsWith(botNumber + ':') || jidNumber === botNumber
+                                || (botLid && (jid === botLid || jid.startsWith(botLid.split(':')[0] + ':')));
+                        });
 
                         if (isReplyToBot || isMentioningBot) {
+                            console.log(`[AUTO-AI] Triggered! replyToBot=${isReplyToBot} mentioned=${isMentioningBot}`);
                             let prompt = body;
 
                             // Remove @mention from prompt text
                             if (isMentioningBot) {
                                 prompt = prompt.replace(new RegExp(`@${botNumber}\\s*`, 'g'), '').trim();
+                                // Also remove LID-based mention if present
+                                if (botLid) {
+                                    const lidNumber = botLid.split(':')[0].split('@')[0];
+                                    prompt = prompt.replace(new RegExp(`@${lidNumber}\\s*`, 'g'), '').trim();
+                                }
                             }
 
                             const quotedBody = getMessageBodyFromMsg(ctxInfo?.quotedMessage);
