@@ -3,6 +3,7 @@ import { config } from '../config';
 import { getCommand, CommandContext } from '../commands/index';
 import { checkMessage, handleViolation } from './moderation.handler';
 import { isMuted } from '../services/db.service';
+import { generateAIResponse } from '../services/ai.service';
 
 // ── Group metadata cache ─────────────────────────────────────────
 interface CachedMetadata {
@@ -179,8 +180,61 @@ export function setupMessageHandler(sock: WASocket): void {
                     }
                 }
 
+                // ── Auto AI: respond when bot is replied to or @mentioned ──
+                if (!body.startsWith(config.prefix)) {
+                    const botId = sock.user?.id;
+                    if (botId) {
+                        const botNumber = botId.split(':')[0];
+                        const botJidNorm = botNumber + '@s.whatsapp.net';
+
+                        const ctxInfo = message.message?.extendedTextMessage?.contextInfo;
+                        const quotedSender = ctxInfo?.participant || '';
+
+                        // Check if replying to a bot message
+                        const isReplyToBot = !!quotedSender && (
+                            quotedSender === botJidNorm ||
+                            quotedSender.startsWith(botNumber + ':')
+                        );
+
+                        // Check if bot is @mentioned
+                        const mentions = ctxInfo?.mentionedJid || [];
+                        const isMentioningBot = mentions.some(jid =>
+                            jid === botJidNorm || jid.startsWith(botNumber + ':')
+                        );
+
+                        if (isReplyToBot || isMentioningBot) {
+                            let prompt = body;
+
+                            // Remove @mention from prompt text
+                            if (isMentioningBot) {
+                                prompt = prompt.replace(new RegExp(`@${botNumber}\\s*`, 'g'), '').trim();
+                            }
+
+                            const quotedBody = getMessageBodyFromMsg(ctxInfo?.quotedMessage);
+
+                            if (prompt || quotedBody) {
+                                await sock.sendPresenceUpdate('composing', groupJid);
+                                try {
+                                    const response = await generateAIResponse(
+                                        prompt || 'Responde a este mensaje de forma breve y útil.',
+                                        quotedBody
+                                    );
+                                    await sock.sendMessage(groupJid, { text: response });
+                                } catch (err) {
+                                    await sock.sendMessage(groupJid, {
+                                        text: '❌ Error al contactar la IA.',
+                                    });
+                                } finally {
+                                    await sock.sendPresenceUpdate('paused', groupJid);
+                                }
+                            }
+                            continue;
+                        }
+                    }
+                    continue; // Not a command and not targeting the bot
+                }
+
                 // ── Command processing ──
-                if (!body.startsWith(config.prefix)) continue;
 
                 const args = body
                     .slice(config.prefix.length)
