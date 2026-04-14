@@ -206,11 +206,12 @@ export function setupMessageHandler(sock: WASocket): void {
                         // Check if replying to a bot message
                         // Support: standard JID, device suffix, and LID format
                         const quotedSenderNumber = quotedSender.split(':')[0].split('@')[0];
+                        const botLidNumber = botLid ? botLid.split(':')[0].split('@')[0] : '';
                         const isReplyToBot = !!quotedSender && (
                             quotedSender === botJidNorm ||
                             quotedSender.startsWith(botNumber + ':') ||
                             quotedSenderNumber === botNumber ||
-                            (botLid && (quotedSender === botLid || quotedSender.startsWith(botLid.split(':')[0] + ':')))
+                            (botLidNumber && quotedSenderNumber === botLidNumber)
                         );
 
                         // Check if bot is @mentioned
@@ -218,7 +219,7 @@ export function setupMessageHandler(sock: WASocket): void {
                         const isMentioningBot = mentions.some(jid => {
                             const jidNumber = jid.split(':')[0].split('@')[0];
                             return jid === botJidNorm || jid.startsWith(botNumber + ':') || jidNumber === botNumber
-                                || (botLid && (jid === botLid || jid.startsWith(botLid.split(':')[0] + ':')));
+                                || (botLidNumber && jidNumber === botLidNumber);
                         });
 
                         if (isReplyToBot || isMentioningBot) {
