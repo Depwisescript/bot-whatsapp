@@ -10,7 +10,7 @@ Si el usuario adjunta texto de un mensaje citado para darle contexto, analiza el
 // ── Gemini (fallback) ────────────────────────────────────────────
 const genAI = config.geminiApiKey ? new GoogleGenerativeAI(config.geminiApiKey) : null;
 const geminiModel = genAI?.getGenerativeModel({
-    model: 'gemini-2.5-pro',
+    model: 'gemini-2.0-flash',
     systemInstruction: SYSTEM_INSTRUCTION,
 });
 
