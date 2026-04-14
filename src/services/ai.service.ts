@@ -25,14 +25,55 @@ function buildPrompt(prompt: string, context?: string): string {
 }
 
 /**
- * Call Pollinations.ai with a specific model.
- * Free, unlimited, no API key needed.
+ * Pollinations.ai via GET endpoint (more reliable from VPS/datacenter IPs)
+ * URL: https://gen.pollinations.ai/text/{prompt}?model=X&system=Y
  */
-async function pollinationsChat(model: string, prompt: string, context?: string): Promise<string> {
+async function pollinationsGET(model: string, prompt: string, context?: string): Promise<string> {
     const fullPrompt = buildPrompt(prompt, context);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+    const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+    try {
+        const params = new URLSearchParams({
+            model,
+            system: SYSTEM_INSTRUCTION,
+            noCache: 'true',
+        });
+
+        const url = `https://gen.pollinations.ai/text/${encodeURIComponent(fullPrompt)}?${params.toString()}`;
+
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+
+        const text = await response.text();
+
+        if (!text || text.length < 2) {
+            throw new Error('Empty response');
+        }
+
+        return text.trim();
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+/**
+ * Pollinations.ai via POST (OpenAI-compatible) — may fail from datacenter IPs
+ */
+async function pollinationsPOST(model: string, prompt: string, context?: string): Promise<string> {
+    const fullPrompt = buildPrompt(prompt, context);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
         const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
@@ -57,7 +98,7 @@ async function pollinationsChat(model: string, prompt: string, context?: string)
         const text = data?.choices?.[0]?.message?.content;
 
         if (!text) {
-            throw new Error('Empty response from model');
+            throw new Error('Empty response');
         }
 
         return text;
@@ -66,39 +107,47 @@ async function pollinationsChat(model: string, prompt: string, context?: string)
     }
 }
 
-// List of Pollinations models to try in order (all free)
-const POLLINATIONS_MODELS = [
-    'openai',           // GPT-4o mini — fast, reliable
-    'gemini',           // Gemini 2.5 Flash via Pollinations (no key needed!)
-    'claude-fast',      // Claude Haiku — fast  
-    'mistral',          // Mistral — good quality
-];
+// Models to try (all free via Pollinations)
+const MODELS = ['openai', 'gemini', 'mistral', 'deepseek'];
 
 /**
- * Generate an AI response. Tries multiple Pollinations models,
- * then falls back to direct Gemini API as last resort.
+ * Generate an AI response. Strategy:
+ * 1. Try Pollinations GET endpoint (works from most VPS)
+ * 2. Try Pollinations POST endpoint (OpenAI-compatible)
+ * 3. Direct Gemini API (last resort, has rate limits)
  */
 export async function generateAIResponse(prompt: string, context?: string): Promise<string> {
-    // Try each Pollinations model in order
-    for (const model of POLLINATIONS_MODELS) {
+    // Strategy 1: Pollinations GET (most reliable from VPS)
+    for (const model of MODELS) {
         try {
-            const response = await pollinationsChat(model, prompt, context);
-            console.log(`[AI] ✓ Response from Pollinations (${model})`);
+            const response = await pollinationsGET(model, prompt, context);
+            console.log(`[AI] ✓ Pollinations GET (${model})`);
             return response;
         } catch (err: any) {
-            console.warn(`[AI] ✗ Pollinations ${model}: ${err.message || err}`);
+            console.warn(`[AI] ✗ GET ${model}: ${err.message || err}`);
         }
     }
 
-    // Last resort: direct Gemini API (has rate limits on free tier)
+    // Strategy 2: Pollinations POST (OpenAI-compatible)
+    for (const model of MODELS.slice(0, 2)) {
+        try {
+            const response = await pollinationsPOST(model, prompt, context);
+            console.log(`[AI] ✓ Pollinations POST (${model})`);
+            return response;
+        } catch (err: any) {
+            console.warn(`[AI] ✗ POST ${model}: ${err.message || err}`);
+        }
+    }
+
+    // Strategy 3: Direct Gemini API (rate limited on free tier)
     if (genAI && geminiModel) {
         try {
             const fullPrompt = buildPrompt(prompt, context);
             const result = await geminiModel.generateContent(fullPrompt);
-            console.log('[AI] ✓ Response from Gemini API (direct fallback)');
+            console.log('[AI] ✓ Gemini API (direct)');
             return result.response.text();
         } catch (err: any) {
-            console.error('[AI] ✗ Gemini API:', err.message || err);
+            console.error('[AI] ✗ Gemini:', err.message || err);
         }
     }
 
