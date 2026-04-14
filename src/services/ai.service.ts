@@ -7,7 +7,7 @@ Actúas de manera amigable, útil y directa. Tus respuestas deben ser cortas, cl
 Utiliza emojis apropiados para darle personalidad, pero sin excederte.
 Si el usuario adjunta texto de un mensaje citado para darle contexto, analiza el contexto para responder su pregunta sobre ese mensaje.`;
 
-// ── Gemini (fallback) ────────────────────────────────────────────
+// ── Gemini (last resort fallback) ────────────────────────────────
 const genAI = config.geminiApiKey ? new GoogleGenerativeAI(config.geminiApiKey) : null;
 const geminiModel = genAI?.getGenerativeModel({
     model: 'gemini-2.0-flash',
@@ -25,90 +25,88 @@ function buildPrompt(prompt: string, context?: string): string {
 }
 
 /**
- * PRIMARY: Generate text using Pollinations.ai (free, unlimited, no API key)
- * Uses OpenAI-compatible endpoint at gen.pollinations.ai
+ * Call Pollinations.ai with a specific model.
+ * Free, unlimited, no API key needed.
  */
-async function pollinationsText(prompt: string, context?: string): Promise<string> {
+async function pollinationsChat(model: string, prompt: string, context?: string): Promise<string> {
     const fullPrompt = buildPrompt(prompt, context);
 
-    const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'DepwiseBot/1.0',
-        },
-        body: JSON.stringify({
-            model: 'openai',
-            messages: [
-                { role: 'system', content: SYSTEM_INSTRUCTION },
-                { role: 'user', content: fullPrompt },
-            ],
-            max_tokens: 1024,
-        }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
-    if (!response.ok) {
-        throw new Error(`Pollinations API error: ${response.status} ${response.statusText}`);
+    try {
+        const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model,
+                messages: [
+                    { role: 'system', content: SYSTEM_INSTRUCTION },
+                    { role: 'user', content: fullPrompt },
+                ],
+                max_tokens: 1024,
+            }),
+            signal: controller.signal,
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json() as any;
+        const text = data?.choices?.[0]?.message?.content;
+
+        if (!text) {
+            throw new Error('Empty response from model');
+        }
+
+        return text;
+    } finally {
+        clearTimeout(timeout);
     }
-
-    const data = await response.json() as any;
-    const text = data?.choices?.[0]?.message?.content;
-
-    if (!text) {
-        throw new Error('Pollinations returned empty response');
-    }
-
-    return text;
 }
 
-/**
- * FALLBACK: Generate text using Google Gemini
- */
-async function geminiText(prompt: string, context?: string): Promise<string> {
-    if (!genAI || !geminiModel) {
-        throw new Error('Gemini not configured');
-    }
-
-    const fullPrompt = buildPrompt(prompt, context);
-    const result = await geminiModel.generateContent(fullPrompt);
-    return result.response.text();
-}
+// List of Pollinations models to try in order (all free)
+const POLLINATIONS_MODELS = [
+    'openai',           // GPT-4o mini — fast, reliable
+    'gemini',           // Gemini 2.5 Flash via Pollinations (no key needed!)
+    'claude-fast',      // Claude Haiku — fast  
+    'mistral',          // Mistral — good quality
+];
 
 /**
- * Generate an AI response. Tries Pollinations first (free/unlimited),
- * falls back to Gemini Pro if it fails.
- * 
- * @param prompt The question from the user
- * @param context The text of the quoted message (if the user replied to something)
- * @returns The AI's response text
+ * Generate an AI response. Tries multiple Pollinations models,
+ * then falls back to direct Gemini API as last resort.
  */
 export async function generateAIResponse(prompt: string, context?: string): Promise<string> {
-    // Try Pollinations first (free, unlimited)
-    try {
-        const response = await pollinationsText(prompt, context);
-        console.log('[AI] Response from: Pollinations ✓');
-        return response;
-    } catch (err: any) {
-        console.warn('[AI] Pollinations failed:', err.message || err);
+    // Try each Pollinations model in order
+    for (const model of POLLINATIONS_MODELS) {
+        try {
+            const response = await pollinationsChat(model, prompt, context);
+            console.log(`[AI] ✓ Response from Pollinations (${model})`);
+            return response;
+        } catch (err: any) {
+            console.warn(`[AI] ✗ Pollinations ${model}: ${err.message || err}`);
+        }
     }
 
-    // Fallback to Gemini Pro
-    try {
-        const response = await geminiText(prompt, context);
-        console.log('[AI] Response from: Gemini Pro (fallback) ✓');
-        return response;
-    } catch (err: any) {
-        console.error('[AI] Gemini also failed:', err.message || err);
+    // Last resort: direct Gemini API (has rate limits on free tier)
+    if (genAI && geminiModel) {
+        try {
+            const fullPrompt = buildPrompt(prompt, context);
+            const result = await geminiModel.generateContent(fullPrompt);
+            console.log('[AI] ✓ Response from Gemini API (direct fallback)');
+            return result.response.text();
+        } catch (err: any) {
+            console.error('[AI] ✗ Gemini API:', err.message || err);
+        }
     }
 
-    return '❌ No se pudo contactar ningún servicio de IA. Intenta de nuevo en unos minutos.';
+    return '❌ No se pudo conectar con la IA. Intenta de nuevo en unos segundos.';
 }
 
 /**
  * Generate an image using Pollinations.ai (free, no API key required)
- * 
- * @param prompt The description of the image to create
- * @returns A Buffer with the image data, or null on error
  */
 export async function generateAIImage(prompt: string): Promise<Buffer | null> {
     try {
