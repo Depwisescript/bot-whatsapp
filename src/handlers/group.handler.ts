@@ -31,7 +31,7 @@ export function setupGroupHandler(sock: WASocket): void {
                     }
 
                     // Welcome message
-                    let welcomeText = `👋 ¡Bienvenido/a @${jid.split('@')[0]}!\n\n📜 Recuerda revisar las reglas del grupo con *!rules*\n\n⚠️ *Sistema de moderación activo:*\n• 1ra infracción → Advertencia\n• 2da infracción → Expulsión\n\n📥 *Descarga tu archivo:*\n• *!entel* — Archivo Entel\n• *!bitel* — Archivo Bitel`;
+                    let welcomeText = `👋 ¡Bienvenido/a @${jid.split('@')[0]}!\n\n📜 Recuerda revisar las reglas del grupo con *!rules*\n\n⚠️ *Sistema de moderación activo:*\n• 1ra infracción → Advertencia\n• 2da infracción → Expulsión\n\n📥 *Descarga tu archivo o app:*\n• *!entel* — Archivo Entel\n• *!bitel* — Archivo Bitel\n• *!injector* — Aplicación Injector`;
 
                     welcomeText += `\n\n¡Disfruta tu estancia! 🎉`;
 
