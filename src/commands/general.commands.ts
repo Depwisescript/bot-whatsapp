@@ -408,4 +408,38 @@ _Los admins están exentos de la moderación automática._`;
             });
         },
     });
+
+    // ── !injector ──────────────────────────────────────────────────
+    registerCommand({
+        name: 'injector',
+        description: 'Descargar archivo de configuración Injector',
+        usage: '!injector',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            const { getSharedFile, getSharedFileGlobal, readFileBuffer } = await import('../services/file.service');
+
+            const file = getSharedFile('injector', ctx.groupJid) || getSharedFileGlobal('injector');
+            if (!file) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '📭 Aún no se ha subido el archivo de *Injector*.\n\n👑 _Un admin puede subirlo respondiendo a un archivo con:_\n*!setarchivo injector*',
+                });
+                return;
+            }
+
+            const buffer = readFileBuffer(file.file_path);
+            if (!buffer) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ Error al leer el archivo de Injector del servidor.',
+                });
+                return;
+            }
+
+            await ctx.sock.sendMessage(ctx.groupJid, {
+                document: buffer,
+                mimetype: file.mime_type,
+                fileName: file.original_name,
+                caption: `📥 *Injector* — ${file.original_name}\n📱 Archivo de configuración Injector`,
+            });
+        },
+    });
 }

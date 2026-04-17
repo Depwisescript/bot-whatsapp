@@ -60,6 +60,9 @@ npm run dev
 | `!tagall [msg]` | Mencionar a todos |
 | `!del` | Eliminar mensaje (respondiendo) |
 | `!status` | Estado y uso de memoria del bot |
+| `!setarchivo [nombre]` | Subir archivo (responder a un archivo) |
+| `!delarchivo [nombre]` | Eliminar archivo compartido |
+| `!archivos` | Listar todos los archivos subidos |
 
 ### Generales (todos)
 | Comando | Descripción |
@@ -68,6 +71,11 @@ npm run dev
 | `!rules` | Reglas del grupo |
 | `!info` | Información del grupo |
 | `!ia [pregunta]` | Hablar con inteligencia artificial Gemini |
+| `!imagine [descripción]` | Generar imagen con IA |
+| `!archivo [nombre]` | Descargar archivo compartido del grupo |
+| `!entel` | Descargar archivo de configuración Entel |
+| `!bitel` | Descargar archivo de configuración Bitel |
+| `!injector` | Descargar archivo de configuración Injector |
 
 ## 🛡️ Auto-Moderación
 
@@ -82,7 +90,7 @@ Detecta automáticamente:
 
 ## 🚀 Producción (VPS Ubuntu)
 
-### Instalar y Arrancar
+### Primera Instalación
 ```bash
 # Compilar
 npm run build
@@ -96,13 +104,26 @@ pm2 save
 pm2 startup
 ```
 
-### Actualizar con Nuevos Cambios
-Si realizas modificaciones al código, actualiza el bot en el VPS así:
+### 🔄 Actualizar Bot (ya instalado)
+Si ya tienes el bot instalado y quieres actualizarlo con los últimos cambios:
 ```bash
-git pull                   # 1. Traer los cambios
-npm run build              # 2. Recompilar
-pm2 restart wa-group-bot   # 3. Reiniciar el bot
+# 1. Ir a la carpeta del bot
+cd bot-whatsapp
+
+# 2. Traer los cambios del repositorio
+git pull origin main
+
+# 3. Instalar dependencias nuevas (si las hay)
+npm install
+
+# 4. Recompilar el código
+npm run build
+
+# 5. Reiniciar el bot
+pm2 restart wa-group-bot
 ```
+
+> **Nota:** No necesitas volver a escanear el QR, la sesión se mantiene.
 
 ### Comandos Útiles de PM2
 - `pm2 logs wa-group-bot` — Ver logs en tiempo real (útil para ver el QR)
@@ -125,6 +146,10 @@ src/
 │   ├── message.handler.ts  # Router de mensajes
 │   ├── moderation.handler.ts # Auto-moderación
 │   └── group.handler.ts     # Eventos de grupo
-└── services/
-    └── db.service.ts     # SQLite (warnings/bans)
+├── services/
+│   ├── db.service.ts     # SQLite (warnings/bans)
+│   ├── ai.service.ts     # Integración con Gemini AI
+│   └── file.service.ts   # Gestión de archivos compartidos
+└── panel/
+    └── panel.ts          # Panel web de administración
 ```
