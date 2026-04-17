@@ -75,7 +75,7 @@ npm run dev
 | `!archivo [nombre]` | Descargar archivo compartido del grupo |
 | `!entel` | Descargar archivo de configuración Entel |
 | `!bitel` | Descargar archivo de configuración Bitel |
-| `!injector` | Descargar archivo de configuración Injector |
+| `!injector` | Descargar APK de Injector |
 
 ## 🛡️ Auto-Moderación
 
