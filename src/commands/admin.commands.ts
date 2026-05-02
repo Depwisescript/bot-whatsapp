@@ -471,31 +471,33 @@ export function registerAdminCommands(): void {
         },
     });
 
-    // ── !delarchivo [nombre] ────────────────────────────────────
+    // ── !delarchivo [id] ────────────────────────────────────────
     registerCommand({
         name: 'delarchivo',
-        description: 'Eliminar un archivo compartido',
-        usage: '!delarchivo [nombre]',
+        description: 'Eliminar un archivo compartido por su ID',
+        usage: '!delarchivo [id]',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const name = ctx.args[0];
-            if (!name) {
+            const idArg = ctx.args[0];
+            const id = parseInt(idArg, 10);
+            
+            if (!idArg || isNaN(id)) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '⚠️ Debes especificar el nombre del archivo a eliminar.\nUso: !delarchivo vpn_config',
+                    text: '⚠️ Debes especificar el ID numérico del archivo a eliminar.\nUso: !delarchivo 5\n\nUsa *!archivos* para ver los IDs.',
                 });
                 return;
             }
 
-            const { deleteSharedFile } = await import('../services/file.service');
-            const deleted = deleteSharedFile(name, ctx.groupJid);
+            const { deleteSharedFileById } = await import('../services/file.service');
+            const deleted = deleteSharedFileById(id);
 
             if (deleted) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: `🗑️ Archivo *${name}* eliminado exitosamente.`,
+                    text: `🗑️ Archivo con ID *${id}* eliminado exitosamente.`,
                 });
             } else {
                 await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: `❌ No se encontró un archivo con el nombre *${name}*.`,
+                    text: `❌ No se encontró un archivo con el ID *${id}*.`,
                 });
             }
         },
@@ -523,10 +525,10 @@ export function registerAdminCommands(): void {
                 const sizeKB = Math.round(f.size / 1024);
                 const sizeMB = (f.size / (1024 * 1024)).toFixed(1);
                 const sizeStr = f.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
-                text += `${i + 1}. 📄 *${f.name}* (${sizeStr})\n   📎 ${f.original_name}\n   📅 ${f.created_at}\n\n`;
+                text += `${i + 1}. [ID: *${f.id}*] 📄 *${f.name}* (${sizeStr})\n   📎 ${f.original_name}\n   📅 ${f.created_at}\n\n`;
             });
 
-            text += `💡 Descarga: *!archivo [nombre]*\n🗑️ Eliminar: *!delarchivo [nombre]*`;
+            text += `💡 Descarga: *!archivo [nombre]*\n🗑️ Eliminar: *!delarchivo [id]*`;
 
             await ctx.sock.sendMessage(ctx.groupJid, { text });
         },

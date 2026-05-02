@@ -26,20 +26,22 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_shared_files_name_group
-    ON shared_files(name, group_jid);
+  );
 `);
+
+// Drop the old unique index to allow multiple files per category/name
+db.exec(`DROP INDEX IF EXISTS idx_shared_files_name_group;`);
 
 // ── Prepared Statements ──────────────────────────────────────────
 const stmtSaveFile = db.prepare(
-    `INSERT OR REPLACE INTO shared_files (name, original_name, mime_type, size, file_path, group_jid, uploaded_by)
+    `INSERT INTO shared_files (name, original_name, mime_type, size, file_path, group_jid, uploaded_by)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
 );
-const stmtGetFile = db.prepare(
-    'SELECT * FROM shared_files WHERE name = ? AND (group_jid = ? OR group_jid = \'global\')'
+const stmtGetFiles = db.prepare(
+    'SELECT * FROM shared_files WHERE name = ? AND (group_jid = ? OR group_jid = \'global\') ORDER BY created_at ASC'
 );
-const stmtGetFileGlobal = db.prepare(
-    'SELECT * FROM shared_files WHERE name = ?'
+const stmtGetFilesGlobal = db.prepare(
+    'SELECT * FROM shared_files WHERE name = ? ORDER BY created_at ASC'
 );
 const stmtDeleteFile = db.prepare(
     'DELETE FROM shared_files WHERE name = ? AND (group_jid = ? OR group_jid = \'global\')'
@@ -101,40 +103,43 @@ export function saveSharedFile(
     fs.writeFileSync(filePath, buffer);
 
     // Insert into DB
-    stmtSaveFile.run(safeName, originalName, mimeType, buffer.length, filePath, groupJid, uploadedBy);
+    const result = stmtSaveFile.run(safeName, originalName, mimeType, buffer.length, filePath, groupJid, uploadedBy);
+    const newId = result.lastInsertRowid as number;
 
-    return getSharedFile(safeName, groupJid)!;
+    return (stmtGetById.get(newId) as SharedFile)!;
 }
 
 /**
- * Get a shared file by name and optional group.
+ * Get shared files by name and optional group.
  */
-export function getSharedFile(name: string, groupJid: string = 'global'): SharedFile | null {
+export function getSharedFiles(name: string, groupJid: string = 'global'): SharedFile[] {
     const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
-    return (stmtGetFile.get(safeName, groupJid) as SharedFile) || null;
+    return stmtGetFiles.all(safeName, groupJid) as SharedFile[];
 }
 
 /**
- * Get a shared file by name (any group).
+ * Get shared files by name (any group).
  */
-export function getSharedFileGlobal(name: string): SharedFile | null {
+export function getSharedFilesGlobal(name: string): SharedFile[] {
     const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
-    return (stmtGetFileGlobal.get(safeName) as SharedFile) || null;
+    return stmtGetFilesGlobal.all(safeName) as SharedFile[];
 }
 
 /**
- * Delete a shared file by name.
+ * Delete ALL shared files by name (used carefully now, prefer deleteById).
  */
 export function deleteSharedFile(name: string, groupJid: string = 'global'): boolean {
     const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
-    const file = getSharedFile(safeName, groupJid);
-    if (file) {
+    const files = getSharedFiles(safeName, groupJid);
+    if (files.length > 0) {
         // Remove from disk
-        try {
-            if (fs.existsSync(file.file_path)) {
-                fs.unlinkSync(file.file_path);
-            }
-        } catch { /* ignore */ }
+        files.forEach(file => {
+            try {
+                if (fs.existsSync(file.file_path)) {
+                    fs.unlinkSync(file.file_path);
+                }
+            } catch { /* ignore */ }
+        });
         stmtDeleteFile.run(safeName, groupJid);
         return true;
     }

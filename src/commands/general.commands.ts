@@ -47,7 +47,7 @@ export function registerGeneralCommands(): void {
             }
 
             // Files commands
-            const fileCmds = commands.filter((c) => !c.adminOnly && ['archivo', 'entel', 'bitel', 'injector'].includes(c.name));
+            const fileCmds = commands.filter((c) => !c.adminOnly && ['archivo', 'entel', 'bitel', 'movistar', 'claro', 'injector'].includes(c.name));
             if (fileCmds.length > 0) {
                 text += '📁 *Archivos:*\n';
                 fileCmds.forEach((cmd) => {
@@ -297,35 +297,33 @@ _Los admins están exentos de la moderación automática._`;
         usage: '!archivo [nombre] (o solo !archivo si hay uno)',
         adminOnly: false,
         execute: async (ctx: CommandContext) => {
-            const { listSharedFiles, getSharedFile, getSingleFile, readFileBuffer, countSharedFiles } = await import('../services/file.service');
+            const { listSharedFiles, getSharedFiles, readFileBuffer } = await import('../services/file.service');
 
             const name = ctx.args[0];
 
             // If no name provided, check if there's only one file
             if (!name) {
-                const fileCount = countSharedFiles(ctx.groupJid);
+                const files = listSharedFiles(ctx.groupJid);
 
-                if (fileCount === 0) {
+                if (files.length === 0) {
                     await ctx.sock.sendMessage(ctx.groupJid, {
                         text: '📭 No hay archivos disponibles en este grupo.',
                     });
                     return;
                 }
 
-                if (fileCount === 1) {
+                if (files.length === 1) {
                     // Auto-send the only file
-                    const file = getSingleFile(ctx.groupJid);
-                    if (file) {
-                        const buffer = readFileBuffer(file.file_path);
-                        if (buffer) {
-                            await ctx.sock.sendMessage(ctx.groupJid, {
-                                document: buffer,
-                                mimetype: file.mime_type,
-                                fileName: file.original_name,
-                                caption: `📥 *${file.name}* — ${file.original_name}`,
-                            });
-                            return;
-                        }
+                    const file = files[0];
+                    const buffer = readFileBuffer(file.file_path);
+                    if (buffer) {
+                        await ctx.sock.sendMessage(ctx.groupJid, {
+                            document: buffer,
+                            mimetype: file.mime_type,
+                            fileName: file.original_name,
+                            caption: `📥 *${file.name}* — ${file.original_name}`,
+                        });
+                        return;
                     }
                     await ctx.sock.sendMessage(ctx.groupJid, {
                         text: '❌ Error al leer el archivo del servidor.',
@@ -333,143 +331,133 @@ _Los admins están exentos de la moderación automática._`;
                     return;
                 }
 
-                // Multiple files, show list
-                const files = listSharedFiles(ctx.groupJid);
-                let text = `📁 *Archivos Disponibles (${files.length})*\n\n`;
-                files.forEach((f, i) => {
-                    text += `${i + 1}. 📄 *${f.name}*\n`;
+                // Multiple files, show list uniquely by name
+                const uniqueNames = [...new Set(files.map(f => f.name))];
+                let text = `📁 *Categorías Disponibles (${uniqueNames.length})*\n\n`;
+                uniqueNames.forEach((n, i) => {
+                    const count = files.filter(f => f.name === n).length;
+                    text += `${i + 1}. 📄 *${n}* (${count} archivos)\n`;
                 });
-                text += `\n💡 Usa: *!archivo [nombre]* para descargar`;
+                text += `\n💡 Usa: *!archivo [nombre]* para descargar todos los de esa categoría`;
 
                 await ctx.sock.sendMessage(ctx.groupJid, { text });
                 return;
             }
 
-            // Get specific file by name
-            const file = getSharedFile(name, ctx.groupJid);
-            if (!file) {
+            // Get specific files by name
+            const categoryFiles = getSharedFiles(name, ctx.groupJid);
+            if (categoryFiles.length === 0) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: `❌ No se encontró un archivo con el nombre *${name}*.\nUsa *!archivo* para ver la lista.`,
+                    text: `❌ No se encontró ningún archivo bajo la categoría *${name}*.\nUsa *!archivo* para ver la lista.`,
                 });
                 return;
             }
 
+            // Send all files in that category
+            for (const file of categoryFiles) {
+                const buffer = readFileBuffer(file.file_path);
+                if (buffer) {
+                    await ctx.sock.sendMessage(ctx.groupJid, {
+                        document: buffer,
+                        mimetype: file.mime_type,
+                        fileName: file.original_name,
+                        caption: `📥 *${file.name}* — ${file.original_name}`,
+                    });
+                } else {
+                    await ctx.sock.sendMessage(ctx.groupJid, {
+                        text: `❌ Error al leer *${file.original_name}* del disco.`,
+                    });
+                }
+            }
+        },
+    });
+
+    // ── Helper to send category files ───────────────────────────
+    const sendCategoryFiles = async (ctx: CommandContext, category: string, description: string) => {
+        const { getSharedFiles, getSharedFilesGlobal, readFileBuffer } = await import('../services/file.service');
+        
+        let files = getSharedFiles(category, ctx.groupJid);
+        if (files.length === 0) {
+            files = getSharedFilesGlobal(category);
+        }
+
+        if (files.length === 0) {
+            await ctx.sock.sendMessage(ctx.groupJid, {
+                text: `📭 Aún no se ha subido ningún archivo de *${category.toUpperCase()}*.\n\n👑 _Un admin puede subir uno o más respondiendo a un archivo con:_\n*!setarchivo ${category}*`,
+            });
+            return;
+        }
+
+        for (const file of files) {
             const buffer = readFileBuffer(file.file_path);
             if (!buffer) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '❌ El archivo existe en la base de datos pero no se pudo leer del disco.',
+                    text: `❌ Error al leer ${file.original_name} del servidor.`,
                 });
-                return;
+                continue;
             }
 
             await ctx.sock.sendMessage(ctx.groupJid, {
                 document: buffer,
                 mimetype: file.mime_type,
                 fileName: file.original_name,
-                caption: `📥 *${file.name}* — ${file.original_name}`,
+                caption: `📥 *${category.toUpperCase()}* — ${file.original_name}\n${description}`,
             });
-        },
-    });
+        }
+    };
 
     // ── !entel ──────────────────────────────────────────────────
     registerCommand({
         name: 'entel',
-        description: 'Descargar archivo de configuración Entel',
+        description: 'Descargar archivo(s) de configuración Entel',
         usage: '!entel',
         adminOnly: false,
         execute: async (ctx: CommandContext) => {
-            const { getSharedFile, getSharedFileGlobal, readFileBuffer } = await import('../services/file.service');
-
-            const file = getSharedFile('entel', ctx.groupJid) || getSharedFileGlobal('entel');
-            if (!file) {
-                await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '📭 Aún no se ha subido el archivo de *Entel*.\n\n👑 _Un admin puede subirlo respondiendo a un archivo con:_\n*!setarchivo entel*',
-                });
-                return;
-            }
-
-            const buffer = readFileBuffer(file.file_path);
-            if (!buffer) {
-                await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '❌ Error al leer el archivo de Entel del servidor.',
-                });
-                return;
-            }
-
-            await ctx.sock.sendMessage(ctx.groupJid, {
-                document: buffer,
-                mimetype: file.mime_type,
-                fileName: file.original_name,
-                caption: `📥 *Entel* — ${file.original_name}\n📱 Archivo de configuración Entel`,
-            });
+            await sendCategoryFiles(ctx, 'entel', '📱 Archivo de configuración Entel');
         },
     });
 
     // ── !bitel ──────────────────────────────────────────────────
     registerCommand({
         name: 'bitel',
-        description: 'Descargar archivo de configuración Bitel',
+        description: 'Descargar archivo(s) de configuración Bitel',
         usage: '!bitel',
         adminOnly: false,
         execute: async (ctx: CommandContext) => {
-            const { getSharedFile, getSharedFileGlobal, readFileBuffer } = await import('../services/file.service');
+            await sendCategoryFiles(ctx, 'bitel', '📱 Archivo de configuración Bitel');
+        },
+    });
 
-            const file = getSharedFile('bitel', ctx.groupJid) || getSharedFileGlobal('bitel');
-            if (!file) {
-                await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '📭 Aún no se ha subido el archivo de *Bitel*.\n\n👑 _Un admin puede subirlo respondiendo a un archivo con:_\n*!setarchivo bitel*',
-                });
-                return;
-            }
+    // ── !movistar ───────────────────────────────────────────────
+    registerCommand({
+        name: 'movistar',
+        description: 'Descargar archivo(s) de configuración Movistar',
+        usage: '!movistar',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            await sendCategoryFiles(ctx, 'movistar', '📱 Archivo de configuración Movistar');
+        },
+    });
 
-            const buffer = readFileBuffer(file.file_path);
-            if (!buffer) {
-                await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '❌ Error al leer el archivo de Bitel del servidor.',
-                });
-                return;
-            }
-
-            await ctx.sock.sendMessage(ctx.groupJid, {
-                document: buffer,
-                mimetype: file.mime_type,
-                fileName: file.original_name,
-                caption: `📥 *Bitel* — ${file.original_name}\n📱 Archivo de configuración Bitel`,
-            });
+    // ── !claro ──────────────────────────────────────────────────
+    registerCommand({
+        name: 'claro',
+        description: 'Descargar archivo(s) de configuración Claro',
+        usage: '!claro',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            await sendCategoryFiles(ctx, 'claro', '📱 Archivo de configuración Claro');
         },
     });
 
     // ── !injector ──────────────────────────────────────────────────
     registerCommand({
         name: 'injector',
-        description: 'Descargar APK de Injector',
+        description: 'Descargar APK(s) de Injector',
         usage: '!injector',
         adminOnly: false,
         execute: async (ctx: CommandContext) => {
-            const { getSharedFile, getSharedFileGlobal, readFileBuffer } = await import('../services/file.service');
-
-            const file = getSharedFile('injector', ctx.groupJid) || getSharedFileGlobal('injector');
-            if (!file) {
-                await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '📭 Aún no se ha subido el APK de *Injector*.\n\n👑 _Un admin puede subirlo respondiendo al APK con:_\n*!setarchivo injector*',
-                });
-                return;
-            }
-
-            const buffer = readFileBuffer(file.file_path);
-            if (!buffer) {
-                await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '❌ Error al leer el APK de Injector del servidor.',
-                });
-                return;
-            }
-
-            await ctx.sock.sendMessage(ctx.groupJid, {
-                document: buffer,
-                mimetype: file.mime_type,
-                fileName: file.original_name,
-                caption: `📥 *Injector* — ${file.original_name}\n📲 APK de Injector`,
-            });
+            await sendCategoryFiles(ctx, 'injector', '📲 APK de Injector');
         },
     });
 }

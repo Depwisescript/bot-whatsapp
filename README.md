@@ -65,8 +65,8 @@ npm run dev
 | `!del` | Eliminar mensaje (respondiendo) |
 | `!status` | Estado y uso de memoria del bot |
 | `!setarchivo [nombre]` | Subir archivo (responder a un archivo) |
-| `!delarchivo [nombre]` | Eliminar archivo compartido |
-| `!archivos` | Listar todos los archivos subidos |
+| `!delarchivo [id]` | Eliminar archivo compartido por su ID |
+| `!archivos` | Listar todos los archivos subidos (muestra los IDs) |
 | `!slowmode [tiempo]` | Limitar frecuencia de mensajes (ej. 30s) |
 | `!setwelcome [msg]` | Personalizar bienvenida al grupo |
 | `!setbye [msg]` | Personalizar despedida del grupo |
@@ -91,10 +91,12 @@ npm run dev
 | `!traducir [idioma] [txt]`| Traduce un mensaje usando IA |
 | `!clima [ciudad]` | Información meteorológica actual |
 | `!dado` / `!moneda` | Tira un dado o lanza una moneda al azar |
-| `!archivo [nombre]` | Descargar archivo compartido del grupo |
-| `!entel` | Descargar archivo de configuración Entel |
-| `!bitel` | Descargar archivo de configuración Bitel |
-| `!injector` | Descargar APK de Injector |
+| `!archivo [nombre]` | Descargar todos los archivos de esa categoría |
+| `!entel` | Descargar archivo(s) de configuración Entel |
+| `!bitel` | Descargar archivo(s) de configuración Bitel |
+| `!movistar` | Descargar archivo(s) de configuración Movistar |
+| `!claro` | Descargar archivo(s) de configuración Claro |
+| `!injector` | Descargar APK(s) de Injector |
 
 ## 🛡️ Auto-Moderación
 
