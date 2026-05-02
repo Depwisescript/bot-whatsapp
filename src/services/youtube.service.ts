@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import ytdl from '@distube/ytdl-core';
+import youtubedl from 'youtube-dl-exec';
 import ytSearch from 'yt-search';
 
 // Temporary directory for downloads
@@ -46,79 +46,53 @@ export async function searchYouTube(query: string): Promise<YouTubeSearchResult 
 }
 
 /**
- * Downloads the best audio format as MP3/WebM/M4A to a temp file
+ * Downloads the best audio format as M4A to a temp file
  */
 export async function downloadAudio(url: string, title: string): Promise<DownloadResult> {
-    return new Promise((resolve, reject) => {
-        try {
-            const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, '_');
-            const filePath = path.join(tempDir, `${safeTitle}_audio_${Date.now()}.mp3`);
-            
-            // Getting highest quality audio
-            const stream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
-            
-            const writeStream = fs.createWriteStream(filePath);
-            stream.pipe(writeStream);
-            
-            writeStream.on('finish', () => {
-                const stats = fs.statSync(filePath);
-                const sizeMB = stats.size / (1024 * 1024);
-                resolve({
-                    filePath,
-                    sizeMB,
-                    title,
-                    isLarge: sizeMB > 50
-                });
-            });
-
-            writeStream.on('error', (err) => {
-                reject(err);
-            });
-            stream.on('error', (err) => {
-                reject(err);
-            });
-        } catch (err) {
-            reject(err);
-        }
+    const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = path.join(tempDir, `${safeTitle}_audio_${Date.now()}.m4a`);
+    
+    await youtubedl(url, {
+        format: 'bestaudio[ext=m4a]/bestaudio',
+        output: filePath,
+        noCheckCertificates: true,
+        noWarnings: true
     });
+    
+    const stats = fs.statSync(filePath);
+    const sizeMB = stats.size / (1024 * 1024);
+    
+    return {
+        filePath,
+        sizeMB,
+        title,
+        isLarge: sizeMB > 50
+    };
 }
 
 /**
- * Downloads a video in standard quality (usually 360p or 720p) with merged audio and video
+ * Downloads a video in standard quality (up to 720p mp4)
  */
 export async function downloadVideo(url: string, title: string): Promise<DownloadResult> {
-    return new Promise((resolve, reject) => {
-        try {
-            const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, '_');
-            const filePath = path.join(tempDir, `${safeTitle}_video_${Date.now()}.mp4`);
-            
-            // audioandvideo ensures we don't have to mux it manually. It's usually 360p or 720p.
-            const stream = ytdl(url, { filter: 'audioandvideo', quality: 'highest' });
-            
-            const writeStream = fs.createWriteStream(filePath);
-            stream.pipe(writeStream);
-            
-            writeStream.on('finish', () => {
-                const stats = fs.statSync(filePath);
-                const sizeMB = stats.size / (1024 * 1024);
-                resolve({
-                    filePath,
-                    sizeMB,
-                    title,
-                    isLarge: sizeMB > 50
-                });
-            });
-
-            writeStream.on('error', (err) => {
-                reject(err);
-            });
-            stream.on('error', (err) => {
-                reject(err);
-            });
-        } catch (err) {
-            reject(err);
-        }
+    const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = path.join(tempDir, `${safeTitle}_video_${Date.now()}.mp4`);
+    
+    await youtubedl(url, {
+        format: 'best[height<=720][ext=mp4]/best[ext=mp4]/best',
+        output: filePath,
+        noCheckCertificates: true,
+        noWarnings: true
     });
+    
+    const stats = fs.statSync(filePath);
+    const sizeMB = stats.size / (1024 * 1024);
+    
+    return {
+        filePath,
+        sizeMB,
+        title,
+        isLarge: sizeMB > 50
+    };
 }
 
 /**
