@@ -1,5 +1,5 @@
 import { registerCommand, CommandContext } from './index';
-import { addWarning, getWarnings, getWarningCount, resetWarnings, addBan, removeBan, getBannedUsers, muteUser, unmuteUser, isMuted, getMutedUntil, setAntiNsfw, getGroupSettings } from '../services/db.service';
+import { addWarning, getWarnings, getWarningCount, resetWarnings, addBan, removeBan, getBannedUsers, muteUser, unmuteUser, isMuted, getMutedUntil, setAntiNsfw, getGroupSettings, addAuditLog } from '../services/db.service';
 import { config } from '../config';
 
 export function registerAdminCommands(): void {
