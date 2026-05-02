@@ -25,8 +25,6 @@ db.exec(`
     uploaded_by TEXT NOT NULL DEFAULT 'panel',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
-
-  );
 `);
 
 // Drop the old unique index to allow multiple files per category/name
