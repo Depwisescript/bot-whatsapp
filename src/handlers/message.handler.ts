@@ -2,8 +2,17 @@ import { WASocket, proto, GroupMetadata } from '@whiskeysockets/baileys';
 import { config } from '../config';
 import { getCommand, CommandContext } from '../commands/index';
 import { checkMessage, handleViolation } from './moderation.handler';
-import { isMuted } from '../services/db.service';
+import { isMuted, addUserXP, getGroupSettings, addAuditLog } from '../services/db.service';
 import { generateAIResponse } from '../services/ai.service';
+
+// ── Rate limiting for commands ───────────────────────────────────
+const commandCooldowns = new Map<string, number>();
+const HEAVY_COMMANDS = new Set(['ia', 'imagine', 'traducir', 'sticker', 'toimg']);
+const HEAVY_COOLDOWN_MS = 30_000; // 30s for AI/media commands
+const NORMAL_COOLDOWN_MS = 3_000; // 3s for normal commands
+
+// ── Slowmode tracking ────────────────────────────────────────────
+const slowmodeLastMsg = new Map<string, number>();
 
 // ── Group metadata cache ─────────────────────────────────────────
 interface CachedMetadata {
@@ -168,6 +177,33 @@ export function setupMessageHandler(sock: WASocket): void {
                 }
 
                 // Skip empty-body messages (images without caption, stickers, etc.)
+                // But still count stickers for anti-spam
+                const hasSticker = !!message.message?.stickerMessage;
+                if (!body && !hasSticker) continue;
+
+                // ── Slowmode check (non-admins only) ──
+                if (!isAdmin && !isOwner && body) {
+                    const settings = getGroupSettings(groupJid);
+                    if (settings.slowmode_seconds > 0) {
+                        const slowKey = `${groupJid}:${senderJid}`;
+                        const lastMsg = slowmodeLastMsg.get(slowKey) || 0;
+                        const elapsed = Date.now() - lastMsg;
+                        const cooldown = settings.slowmode_seconds * 1000;
+
+                        if (elapsed < cooldown) {
+                            try {
+                                if (message.key) {
+                                    await sock.sendMessage(groupJid, {
+                                        delete: message.key as proto.IMessageKey,
+                                    });
+                                }
+                            } catch { /* ignore */ }
+                            continue;
+                        }
+                        slowmodeLastMsg.set(slowKey, Date.now());
+                    }
+                }
+
                 if (!body) continue;
 
                 // ── Auto-moderation (skip for admins and owner) ──
@@ -300,9 +336,50 @@ export function setupMessageHandler(sock: WASocket): void {
                 };
 
                 await command.execute(ctx);
+
+                // ── Auto-reaction on success (for specific commands) ──
+                if (!['ia', 'imagine', 'traducir'].includes(command.name)) {
+                    try {
+                        if (message.key) {
+                            await sock.sendMessage(groupJid, {
+                                react: { text: '✅', key: message.key }
+                            });
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                // ── Audit log for admin commands ──
+                if (command.adminOnly) {
+                    const target = ctx.mentionedJids[0];
+                    addAuditLog(groupJid, command.name.toUpperCase(), senderJid, target, ctx.args.join(' ').substring(0, 100) || undefined);
+                }
+
+                // ── XP tracking (non-command messages handled below) ──
             } catch (err) {
                 console.error('Error processing message:', err);
             }
+
+            // ── XP / Level tracking (all valid group messages) ──
+            try {
+                const groupJid = message.key.remoteJid;
+                const senderJid = message.key.participant;
+                if (groupJid && senderJid && groupJid.endsWith('@g.us')) {
+                    const result = addUserXP(groupJid, senderJid);
+                    if (result.leveled_up) {
+                        const titles: Record<number, string> = {
+                            3: '📘 Activo', 5: '📗 Intermedio', 7: '🌟 Avanzado',
+                            10: '⭐ Veterano', 15: '🔥 Experto', 20: '⚡ Platino',
+                            30: '🏆 Oro', 40: '💎 Diamante', 50: '👑 Leyenda',
+                        };
+                        const title = titles[result.new_level] || '';
+                        const titleText = title ? ` — ${title}` : '';
+                        await sock.sendMessage(groupJid, {
+                            text: `🎉 ¡@${senderJid.split('@')[0]} subió al *nivel ${result.new_level}*!${titleText}`,
+                            mentions: [senderJid],
+                        });
+                    }
+                }
+            } catch { /* XP errors should not break the bot */ }
         }
     });
 }

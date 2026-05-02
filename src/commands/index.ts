@@ -60,8 +60,10 @@ export function getAllCommands(): Command[] {
 // Register all commands
 import { registerAdminCommands } from './admin.commands';
 import { registerGeneralCommands } from './general.commands';
+import { registerExtraCommands } from './extra.commands';
 
 export function initCommands(): void {
     registerAdminCommands();
     registerGeneralCommands();
+    registerExtraCommands();
 }

@@ -13,6 +13,7 @@ import { setupMessageHandler } from './handlers/message.handler';
 import { setupGroupHandler } from './handlers/group.handler';
 import { cleanupSpamTracker } from './handlers/moderation.handler';
 import { startPanel } from './panel/panel';
+import { closeDatabase, getDueReminders, deleteReminder } from './services/db.service';
 
 const logger = pino({ level: 'silent' });
 
@@ -24,6 +25,28 @@ setInterval(cleanupSpamTracker, 60_000);
 
 // Start the admin panel (only once)
 let panelStarted = false;
+
+// ── Reminder Worker ──────────────────────────────────────────────
+let reminderInterval: NodeJS.Timeout | null = null;
+
+function startReminderWorker(sock: any) {
+    if (reminderInterval) clearInterval(reminderInterval);
+    
+    reminderInterval = setInterval(async () => {
+        try {
+            const due = getDueReminders();
+            for (const rem of due) {
+                await sock.sendMessage(rem.group_jid, {
+                    text: `⏰ *RECORDATORIO*\n\nHola @${rem.user_jid.split('@')[0]}, me pediste que te recordara esto:\n\n📝 "${rem.message}"`,
+                    mentions: [rem.user_jid]
+                });
+                deleteReminder(rem.id);
+            }
+        } catch (err) {
+            console.error('Error in reminder worker:', err);
+        }
+    }, 60_000); // Check every minute
+}
 
 export async function startBot(): Promise<void> {
     const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
@@ -87,4 +110,18 @@ export async function startBot(): Promise<void> {
     // Set up event handlers
     setupMessageHandler(sock);
     setupGroupHandler(sock);
+    
+    // Start background workers
+    startReminderWorker(sock);
+
+    // ── Graceful Shutdown ─────────────────────────────────────────
+    const shutdown = () => {
+        console.log('\n🛑 Cerrando bot de forma segura...');
+        if (reminderInterval) clearInterval(reminderInterval);
+        closeDatabase();
+        process.exit(0);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
 }

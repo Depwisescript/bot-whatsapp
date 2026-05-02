@@ -100,6 +100,15 @@ export function startPanel(): void {
         }
     });
 
+    // ── Health Check ─────────────────────────────────────────────
+    app.get('/api/health', (_req: express.Request, res: express.Response) => {
+        res.json({
+            status: 'ok',
+            uptime: Math.floor((Date.now() - config.startTime) / 1000),
+            timestamp: Date.now()
+        });
+    });
+
     // ── Serve the dashboard HTML ─────────────────────────────────
     app.get('/', (_req: express.Request, res: express.Response) => {
         res.sendFile(path.resolve(__dirname, 'views', 'index.html'));

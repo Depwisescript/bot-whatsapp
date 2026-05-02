@@ -5,10 +5,13 @@ Bot de control y moderación para grupos de WhatsApp. Construido con [Baileys](h
 ## ⚡ Características
 
 - **Comandos Admin:** `!kick`, `!ban`, `!warn`, `!promote`, `!demote`
-- **Auto-Moderación:** Anti-links, anti-spam, anti-ventas
-- **Sistema 2-Strike:** 1ra infracción = advertencia, 2da = expulsión
-- **Bienvenida/Despedida** automáticas
+- **Auto-Moderación:** Anti-links, anti-spam, anti-ventas, anti-stickerspam
+- **Sistema de Infracciones:** 1ra = advertencia, 2da = expulsión
+- **Sistema de Niveles (XP):** Gamificación, los usuarios ganan experiencia por mensaje
+- **Bienvenida/Despedida Personalizable** con variables (`{user}`, `{group}`)
+- **Diversión y Utilidad:** Conversor de stickers, recordatorios, encuestas, traductor, clima
 - **Ban permanente** con auto-kick si reingresa
+- **Slowmode** para limitar la velocidad de mensajes
 
 ## 📋 Requisitos
 
@@ -63,8 +66,12 @@ npm run dev
 | `!setarchivo [nombre]` | Subir archivo (responder a un archivo) |
 | `!delarchivo [nombre]` | Eliminar archivo compartido |
 | `!archivos` | Listar todos los archivos subidos |
+| `!slowmode [tiempo]` | Limitar frecuencia de mensajes (ej. 30s) |
+| `!setwelcome [msg]` | Personalizar bienvenida al grupo |
+| `!setbye [msg]` | Personalizar despedida del grupo |
+| `!logs` | Ver auditoría de acciones de moderación |
 
-### Generales (todos)
+### Generales y Diversión (todos)
 | Comando | Descripción |
 |---|---|
 | `!help` | Lista de comandos |
@@ -72,6 +79,16 @@ npm run dev
 | `!info` | Información del grupo |
 | `!ia [pregunta]` | Hablar con inteligencia artificial Gemini |
 | `!imagine [descripción]` | Generar imagen con IA |
+| `!level` | Ver tu nivel y progreso actual |
+| `!top` | Ver el top 10 usuarios más activos |
+| `!perfil @user` | Ver estadísticas completas de un usuario |
+| `!sticker` | Convierte una imagen a sticker (respondiendo a la foto) |
+| `!toimg` | Convierte un sticker a imagen |
+| `!poll [preg] \| [opc1]...` | Crea una encuesta en el grupo |
+| `!remind [tiempo] [txt]`| Crea un recordatorio (ej. 30m, 2h) |
+| `!traducir [idioma] [txt]`| Traduce un mensaje usando IA |
+| `!clima [ciudad]` | Información meteorológica actual |
+| `!dado` / `!moneda` | Tira un dado o lanza una moneda al azar |
 | `!archivo [nombre]` | Descargar archivo compartido del grupo |
 | `!entel` | Descargar archivo de configuración Entel |
 | `!bitel` | Descargar archivo de configuración Bitel |

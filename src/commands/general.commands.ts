@@ -21,15 +21,45 @@ export function registerGeneralCommands(): void {
             if (adminCmds.length > 0) {
                 text += '👑 *Comandos Admin:*\n';
                 adminCmds.forEach((cmd) => {
+                    text += `  • *${config.prefix}${cmd.name}*\n`;
+                });
+                text += '\n';
+            }
+
+            // Fun & Utilities commands
+            const funCmds = commands.filter((c) => !c.adminOnly && ['level', 'top', 'perfil', 'dado', 'moneda', 'clima', 'remind', 'poll', 'sticker', 'toimg'].includes(c.name));
+            if (funCmds.length > 0) {
+                text += '🎮 *Diversión y Utilidad:*\n';
+                funCmds.forEach((cmd) => {
+                    text += `  • *${config.prefix}${cmd.name}* — ${cmd.description}\n`;
+                });
+                text += '\n';
+            }
+
+            // AI commands
+            const aiCmds = commands.filter((c) => !c.adminOnly && ['ia', 'imagine', 'traducir'].includes(c.name));
+            if (aiCmds.length > 0) {
+                text += '🤖 *Inteligencia Artificial:*\n';
+                aiCmds.forEach((cmd) => {
+                    text += `  • *${config.prefix}${cmd.name}* — ${cmd.description}\n`;
+                });
+                text += '\n';
+            }
+
+            // Files commands
+            const fileCmds = commands.filter((c) => !c.adminOnly && ['archivo', 'entel', 'bitel', 'injector'].includes(c.name));
+            if (fileCmds.length > 0) {
+                text += '📁 *Archivos:*\n';
+                fileCmds.forEach((cmd) => {
                     text += `  • *${config.prefix}${cmd.name}* — ${cmd.description}\n`;
                 });
                 text += '\n';
             }
 
             // General commands
-            const generalCmds = commands.filter((c) => !c.adminOnly);
+            const generalCmds = commands.filter((c) => !c.adminOnly && !funCmds.includes(c) && !aiCmds.includes(c) && !fileCmds.includes(c));
             if (generalCmds.length > 0) {
-                text += '📌 *Comandos Generales:*\n';
+                text += '📌 *Generales:*\n';
                 generalCmds.forEach((cmd) => {
                     text += `  • *${config.prefix}${cmd.name}* — ${cmd.description}\n`;
                 });
