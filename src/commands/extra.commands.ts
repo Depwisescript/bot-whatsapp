@@ -560,4 +560,109 @@ export function registerExtraCommands(): void {
             }
         },
     });
+
+    // ── !play ───────────────────────────────────────────────────
+    registerCommand({
+        name: 'play',
+        description: 'Descargar canción de YouTube',
+        usage: '!play [nombre de la canción]',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            const query = ctx.args.join(' ');
+            if (!query) {
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '⚠️ Uso: !play [nombre de la canción]' });
+                return;
+            }
+
+            await ctx.sock.sendMessage(ctx.groupJid, { text: `🎵 Buscando y descargando audio: *${query}*...\nEsto puede tardar un poco dependiendo de tu VPS.` });
+            
+            try {
+                const { searchYouTube, downloadAudio, deleteTempFile } = await import('../services/youtube.service');
+                const result = await searchYouTube(query);
+                
+                if (!result) {
+                    await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ No encontré ningún resultado en YouTube.' });
+                    return;
+                }
+
+                const dl = await downloadAudio(result.url, result.title);
+                
+                try {
+                    if (dl.isLarge) {
+                        await ctx.sock.sendMessage(ctx.groupJid, {
+                            document: { url: dl.filePath },
+                            mimetype: 'audio/mpeg',
+                            fileName: `${result.title}.mp3`,
+                            caption: `🎧 *${result.title}* (${result.duration})\nCanal: ${result.author}\n_Enviado como documento por su gran tamaño._`
+                        });
+                    } else {
+                        await ctx.sock.sendMessage(ctx.groupJid, {
+                            audio: { url: dl.filePath },
+                            mimetype: 'audio/mp4', // Mejor compatibilidad en WA
+                            ptt: false 
+                        });
+                        await ctx.sock.sendMessage(ctx.groupJid, { text: `🎧 *${result.title}* (${result.duration})\nCanal: ${result.author}` });
+                    }
+                } finally {
+                    deleteTempFile(dl.filePath);
+                }
+                
+            } catch (err) {
+                console.error('Error in !play:', err);
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ Hubo un error al descargar el audio. Puede que el archivo esté protegido o no se haya podido descargar.' });
+            }
+        },
+    });
+
+    // ── !video ──────────────────────────────────────────────────
+    registerCommand({
+        name: 'video',
+        description: 'Descargar video de YouTube',
+        usage: '!video [nombre del video]',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            const query = ctx.args.join(' ');
+            if (!query) {
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '⚠️ Uso: !video [nombre del video]' });
+                return;
+            }
+
+            await ctx.sock.sendMessage(ctx.groupJid, { text: `🎥 Buscando y descargando video: *${query}*...\nEste proceso toma más tiempo, paciencia.` });
+            
+            try {
+                const { searchYouTube, downloadVideo, deleteTempFile } = await import('../services/youtube.service');
+                const result = await searchYouTube(query);
+                
+                if (!result) {
+                    await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ No encontré ningún resultado en YouTube.' });
+                    return;
+                }
+
+                const dl = await downloadVideo(result.url, result.title);
+                
+                try {
+                    if (dl.isLarge) {
+                        await ctx.sock.sendMessage(ctx.groupJid, {
+                            document: { url: dl.filePath },
+                            mimetype: 'video/mp4',
+                            fileName: `${result.title}.mp4`,
+                            caption: `🎥 *${result.title}* (${result.duration})\nCanal: ${result.author}\n_Enviado como documento por su gran tamaño._`
+                        });
+                    } else {
+                        await ctx.sock.sendMessage(ctx.groupJid, {
+                            video: { url: dl.filePath },
+                            caption: `🎥 *${result.title}* (${result.duration})\nCanal: ${result.author}`,
+                            mimetype: 'video/mp4'
+                        });
+                    }
+                } finally {
+                    deleteTempFile(dl.filePath);
+                }
+                
+            } catch (err) {
+                console.error('Error in !video:', err);
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ Hubo un error al descargar el video. Quizá es demasiado pesado para procesarlo en el servidor.' });
+            }
+        },
+    });
 }
