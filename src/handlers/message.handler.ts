@@ -1,9 +1,9 @@
-import { WASocket, proto, GroupMetadata } from '@whiskeysockets/baileys';
+import { WASocket, proto, GroupMetadata, downloadMediaMessage } from '@whiskeysockets/baileys';
 import { config } from '../config';
 import { getCommand, CommandContext } from '../commands/index';
 import { checkMessage, handleViolation } from './moderation.handler';
 import { isMuted, addUserXP, getGroupSettings, addAuditLog } from '../services/db.service';
-import { generateAIResponse } from '../services/ai.service';
+import { generateAIResponse, analyzeImageContent } from '../services/ai.service';
 
 // ── Rate limiting for commands ───────────────────────────────────
 const commandCooldowns = new Map<string, number>();
@@ -178,7 +178,39 @@ export function setupMessageHandler(sock: WASocket): void {
 
                 // Skip empty-body messages (images without caption, stickers, etc.)
                 // But still count stickers for anti-spam
-                const hasSticker = !!message.message?.stickerMessage;
+                const imageMsg = message.message?.imageMessage;
+                const stickerMsg = message.message?.stickerMessage;
+                const hasSticker = !!stickerMsg;
+                
+                // ── Anti-NSFW Vision Check (skip for admins and owner) ──
+                if (!isAdmin && !isOwner && (imageMsg || stickerMsg)) {
+                    const settings = getGroupSettings(groupJid);
+                    if (settings.anti_nsfw === 1) {
+                        try {
+                            const buffer = await downloadMediaMessage(
+                                message,
+                                'buffer',
+                                { },
+                                { logger: undefined as any, reuploadRequest: sock.updateMediaMessage }
+                            );
+                            
+                            const mimeType = imageMsg?.mimetype || stickerMsg?.mimetype || 'image/jpeg';
+                            const isNsfw = await analyzeImageContent(buffer as Buffer, mimeType);
+                            
+                            if (isNsfw) {
+                                await handleViolation(sock, message, groupJid, senderJid, {
+                                    violation: true,
+                                    type: 'badword', // Map to generic badword/NSFW rule
+                                    reason: 'Contenido visual inapropiado/NSFW (+18)'
+                                });
+                                continue; // Skip further processing, message deleted
+                            }
+                        } catch (err) {
+                            console.error('[Anti-NSFW] Error processing media:', err);
+                        }
+                    }
+                }
+
                 if (!body && !hasSticker) continue;
 
                 // ── Slowmode check (non-admins only) ──

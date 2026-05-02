@@ -1,5 +1,5 @@
 import { registerCommand, CommandContext } from './index';
-import { addWarning, getWarnings, getWarningCount, resetWarnings, addBan, removeBan, getBannedUsers, muteUser, unmuteUser, isMuted, getMutedUntil } from '../services/db.service';
+import { addWarning, getWarnings, getWarningCount, resetWarnings, addBan, removeBan, getBannedUsers, muteUser, unmuteUser, isMuted, getMutedUntil, setAntiNsfw, getGroupSettings } from '../services/db.service';
 import { config } from '../config';
 
 export function registerAdminCommands(): void {
@@ -529,6 +529,38 @@ export function registerAdminCommands(): void {
             text += `💡 Descarga: *!archivo [nombre]*\n🗑️ Eliminar: *!delarchivo [nombre]*`;
 
             await ctx.sock.sendMessage(ctx.groupJid, { text });
+        },
+    });
+
+    // ── !antinsfw ────────────────────────────────────────────────
+    registerCommand({
+        name: 'antinsfw',
+        description: 'Activar/desactivar el filtro de IA para imágenes +18',
+        usage: '!antinsfw on | !antinsfw off',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            const arg = ctx.args[0]?.toLowerCase();
+
+            if (!arg) {
+                const settings = getGroupSettings(ctx.groupJid);
+                const status = settings.anti_nsfw === 1 ? 'Activo 🟢' : 'Desactivado 🔴';
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `👁️ *Filtro Anti-NSFW (IA):* ${status}\n\nUso:\n• !antinsfw on\n• !antinsfw off\n\n_Nota: Analiza fotos y stickers usando Gemini_`,
+                });
+                return;
+            }
+
+            if (arg === 'on') {
+                setAntiNsfw(ctx.groupJid, true);
+                addAuditLog(ctx.groupJid, 'ANTI_NSFW_ON', ctx.senderJid);
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '🟢 *Filtro Anti-NSFW activado.*\nAhora analizaré las imágenes y stickers enviados.' });
+            } else if (arg === 'off') {
+                setAntiNsfw(ctx.groupJid, false);
+                addAuditLog(ctx.groupJid, 'ANTI_NSFW_OFF', ctx.senderJid);
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '🔴 *Filtro Anti-NSFW desactivado.*' });
+            } else {
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '⚠️ Uso incorrecto. Debe ser *on* u *off*.' });
+            }
         },
     });
 }

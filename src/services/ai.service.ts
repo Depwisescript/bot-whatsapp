@@ -147,3 +147,38 @@ export async function generateAIImage(prompt: string): Promise<Buffer | null> {
         return null;
     }
 }
+
+/**
+ * Analyze an image/sticker for NSFW content using Gemini Vision.
+ * Returns true if the image is considered NSFW/Inappropriate.
+ */
+export async function analyzeImageContent(buffer: Buffer, mimeType: string): Promise<boolean> {
+    if (!genAI || !config.geminiApiKey) {
+        console.log('[AI] NSFW check skipped (No Gemini API key)');
+        return false;
+    }
+
+    try {
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        
+        const prompt = "Analiza esta imagen de manera estricta. ¿Contiene contenido pornográfico, desnudez explícita, material +18 o violencia gráfica extrema? Responde ÚNICAMENTE con la palabra 'SI' o la palabra 'NO'.";
+        
+        const imagePart = {
+            inlineData: {
+                data: buffer.toString('base64'),
+                mimeType
+            }
+        };
+
+        const result = await model.generateContent([prompt, imagePart]);
+        const responseText = result.response.text().trim().toUpperCase();
+        
+        console.log(`[AI NSFW] Gemini Response: ${responseText}`);
+        
+        // Sometimes Gemini adds punctuation like "SI."
+        return responseText.includes('SI') || responseText.includes('SÍ');
+    } catch (err: any) {
+        console.error('[AI NSFW] Error al analizar imagen:', err.message || err);
+        return false; // On error, assume safe to avoid blocking normal traffic
+    }
+}

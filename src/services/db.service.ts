@@ -148,6 +148,10 @@ const stmtUpdateSlowmode = db.prepare(
     `INSERT INTO group_settings (group_jid, slowmode_seconds) VALUES (?, ?)
      ON CONFLICT(group_jid) DO UPDATE SET slowmode_seconds = ?, updated_at = CURRENT_TIMESTAMP`
 );
+const stmtUpdateAntiNsfw = db.prepare(
+    `INSERT INTO group_settings (group_jid, anti_nsfw) VALUES (?, ?)
+     ON CONFLICT(group_jid) DO UPDATE SET anti_nsfw = ?, updated_at = CURRENT_TIMESTAMP`
+);
 
 // User Levels
 const stmtGetUserLevel = db.prepare(
@@ -284,6 +288,11 @@ export function setByeMsg(groupJid: string, msg: string | null): void {
 
 export function setSlowmode(groupJid: string, seconds: number): void {
     stmtUpdateSlowmode.run(groupJid, seconds, seconds);
+}
+
+export function setAntiNsfw(groupJid: string, enabled: boolean): void {
+    const val = enabled ? 1 : 0;
+    stmtUpdateAntiNsfw.run(groupJid, val, val);
 }
 
 // ── User Levels ─────────────────────────────────────────────────

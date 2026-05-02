@@ -6,6 +6,7 @@ Bot de control y moderación para grupos de WhatsApp. Construido con [Baileys](h
 
 - **Comandos Admin:** `!kick`, `!ban`, `!warn`, `!promote`, `!demote`
 - **Auto-Moderación:** Anti-links, anti-spam, anti-ventas, anti-stickerspam
+- **Filtro Anti-NSFW (IA):** Detecta y elimina imágenes y stickers con contenido inapropiado (+18) automáticamente.
 - **Sistema de Infracciones:** 1ra = advertencia, 2da = expulsión
 - **Sistema de Niveles (XP):** Gamificación, los usuarios ganan experiencia por mensaje
 - **Bienvenida/Despedida Personalizable** con variables (`{user}`, `{group}`)
@@ -69,6 +70,7 @@ npm run dev
 | `!slowmode [tiempo]` | Limitar frecuencia de mensajes (ej. 30s) |
 | `!setwelcome [msg]` | Personalizar bienvenida al grupo |
 | `!setbye [msg]` | Personalizar despedida del grupo |
+| `!antinsfw [on/off]` | Activar/desactivar el filtro IA para imágenes +18 |
 | `!logs` | Ver auditoría de acciones de moderación |
 
 ### Generales y Diversión (todos)
