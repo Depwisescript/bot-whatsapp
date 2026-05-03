@@ -1,7 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import play from 'play-dl';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import ytSearch from 'yt-search';
+
+const execAsync = promisify(exec);
 
 // Temporary directory for downloads
 const tempDir = path.resolve('./data/temp');
@@ -49,69 +52,52 @@ export async function searchYouTube(query: string): Promise<YouTubeSearchResult 
  * Downloads the best audio format
  */
 export async function downloadAudio(url: string, title: string): Promise<DownloadResult> {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, '_');
-            const filePath = path.join(tempDir, `${safeTitle}_audio_${Date.now()}.mp3`);
-            
-            const stream = await play.stream(url, { discordPlayerCompatibility: true });
-            const writeStream = fs.createWriteStream(filePath);
-            
-            stream.stream.pipe(writeStream);
-            
-            writeStream.on('finish', () => {
-                const stats = fs.statSync(filePath);
-                const sizeMB = stats.size / (1024 * 1024);
-                resolve({
-                    filePath,
-                    sizeMB,
-                    title,
-                    isLarge: sizeMB > 50
-                });
-            });
-
-            writeStream.on('error', (err) => {
-                reject(err);
-            });
-        } catch (err) {
-            reject(err);
-        }
-    });
+    const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = path.join(tempDir, `${safeTitle}_audio_${Date.now()}.mp3`);
+    
+    try {
+        // Usa yt-dlp directamente desde el sistema
+        await execAsync(`yt-dlp --extract-audio --audio-format mp3 --audio-quality 0 --no-warnings -o "${filePath}" "${url}"`);
+        
+        const stats = fs.statSync(filePath);
+        const sizeMB = stats.size / (1024 * 1024);
+        
+        return {
+            filePath,
+            sizeMB,
+            title,
+            isLarge: sizeMB > 50
+        };
+    } catch (err) {
+        console.error('Error en downloadAudio yt-dlp:', err);
+        throw err;
+    }
 }
 
 /**
  * Downloads a video in standard quality (up to 720p mp4)
  */
 export async function downloadVideo(url: string, title: string): Promise<DownloadResult> {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, '_');
-            const filePath = path.join(tempDir, `${safeTitle}_video_${Date.now()}.mp4`);
-            
-            // Getting highest video quality available
-            const stream = await play.stream(url, { quality: 2 }); // 2 is typically highest video
-            const writeStream = fs.createWriteStream(filePath);
-            
-            stream.stream.pipe(writeStream);
-            
-            writeStream.on('finish', () => {
-                const stats = fs.statSync(filePath);
-                const sizeMB = stats.size / (1024 * 1024);
-                resolve({
-                    filePath,
-                    sizeMB,
-                    title,
-                    isLarge: sizeMB > 50
-                });
-            });
-
-            writeStream.on('error', (err) => {
-                reject(err);
-            });
-        } catch (err) {
-            reject(err);
-        }
-    });
+    const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = path.join(tempDir, `${safeTitle}_video_${Date.now()}.mp4`);
+    
+    try {
+        // Usa yt-dlp directamente desde el sistema (max 720p para compatibilidad de WhatsApp)
+        await execAsync(`yt-dlp -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-warnings -o "${filePath}" "${url}"`);
+        
+        const stats = fs.statSync(filePath);
+        const sizeMB = stats.size / (1024 * 1024);
+        
+        return {
+            filePath,
+            sizeMB,
+            title,
+            isLarge: sizeMB > 50
+        };
+    } catch (err) {
+        console.error('Error en downloadVideo yt-dlp:', err);
+        throw err;
+    }
 }
 
 /**
