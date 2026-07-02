@@ -160,6 +160,27 @@ pm2 restart wa-group-bot
 
 > **Nota:** No necesitas volver a escanear el QR, la sesión se mantiene.
 
+### ⚠️ ¿Qué hacer si se desconecta o vence la sesión de WhatsApp?
+Si por algún motivo cierras sesión desde tu celular o WhatsApp desconecta el bot, tendrás que volver a vincularlo generando un nuevo código QR. Para hacerlo, sigue estos pasos en tu consola:
+
+```bash
+# 1. Ir a la carpeta del bot
+cd bot-whatsapp
+
+# 2. Detener el bot
+pm2 stop wa-group-bot
+
+# 3. Borrar la sesión antigua (IMPORTANTE)
+rm -rf auth_info
+
+# 4. Volver a iniciar el bot
+pm2 start wa-group-bot
+
+# 5. Ver la consola para escanear el NUEVO código QR
+pm2 logs wa-group-bot
+```
+*(Presiona `Ctrl + C` para salir de los logs una vez que lo hayas escaneado).*
+
 ### Comandos Útiles de PM2
 - `pm2 logs wa-group-bot` — Ver logs en tiempo real (útil para ver el QR)
 - `pm2 stop wa-group-bot` — Detener el bot
