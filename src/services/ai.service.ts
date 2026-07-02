@@ -104,7 +104,14 @@ async function openAIPOST(prompt: string, context?: string): Promise<string> {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+            let errBody = '';
+            try {
+                const errJson = await response.json() as any;
+                errBody = errJson?.error?.message || JSON.stringify(errJson);
+            } catch (e) {
+                errBody = await response.text();
+            }
+            throw new Error(`HTTP ${response.status} ${response.statusText} - ${errBody}`);
         }
 
         const data = await response.json() as any;
