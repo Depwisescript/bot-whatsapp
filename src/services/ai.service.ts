@@ -75,6 +75,51 @@ async function pollinationsPOST(model: string, prompt: string, context?: string)
     }
 }
 
+/**
+ * Standard OpenAI API Compatible POST
+ */
+async function openAIPOST(prompt: string, context?: string): Promise<string> {
+    const fullPrompt = buildPrompt(prompt, context);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+
+    try {
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.openAiApiKey}`
+        };
+
+        const response = await fetch(`${config.openAiBaseUrl}/chat/completions`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                model: config.openAiModel,
+                messages: [
+                    { role: 'system', content: SYSTEM_INSTRUCTION },
+                    { role: 'user', content: fullPrompt },
+                ],
+                max_tokens: 1024,
+            }),
+            signal: controller.signal,
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json() as any;
+        const text = data?.choices?.[0]?.message?.content;
+
+        if (!text) {
+            throw new Error('Empty response');
+        }
+
+        return text;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
 // Models to try via Pollinations
 const POLLINATIONS_MODELS = ['openai', 'gemini', 'mistral', 'deepseek'];
 
@@ -99,7 +144,18 @@ export async function generateAIResponse(prompt: string, context?: string): Prom
         }
     }
 
-    // Strategy 2: Pollinations POST (fallback, only if API key is set)
+    // Strategy 2: Custom API (OpenAI/Groq/DeepSeek)
+    if (config.openAiApiKey) {
+        try {
+            const response = await openAIPOST(prompt, context);
+            console.log(`[AI] ✓ Custom API (${config.openAiModel})`);
+            return response;
+        } catch (err: any) {
+            console.warn(`[AI] ✗ Custom API: ${err.message || err}`);
+        }
+    }
+
+    // Strategy 3: Pollinations POST (fallback, only if API key is set)
     if (POLLINATIONS_API_KEY) {
         for (const model of POLLINATIONS_MODELS) {
             try {

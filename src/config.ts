@@ -11,7 +11,16 @@ export const config = {
     autoReplyMsg: process.env.AUTO_REPLY_MSG || 'Hola 👋\nEste es un bot de administración de grupos.\n\nPara ventas o consultas directas, por favor contáctame a mi número principal:\n📱 wa.me/51956815890',
 
     /** Gemini API Key for answering queries */
-    geminiApiKey: process.env.GEMINI_API_KEY || 'PEGA_TU_API_KEY_AQUI',
+    geminiApiKey: process.env.GEMINI_API_KEY || '',
+
+    /** Custom API Key (OpenAI, Groq, DeepSeek, etc) */
+    openAiApiKey: process.env.OPENAI_API_KEY || '',
+
+    /** Custom API Base URL */
+    openAiBaseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+
+    /** Custom Model Name */
+    openAiModel: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
 
     /** Node environment */
     nodeEnv: process.env.NODE_ENV || 'development',
