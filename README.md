@@ -5,9 +5,9 @@ Bot de control y moderación para grupos de WhatsApp. Construido con [Baileys](h
 ## ⚡ Características
 
 - **Comandos Admin:** `!kick`, `!ban`, `!warn`, `!promote`, `!demote`
-- **Auto-Moderación:** Anti-links, anti-spam, anti-ventas, anti-stickerspam
+- **Auto-Moderación Inteligente (IA):** Filtro anti-links, anti-spam, y un detector de **ventas/publicidad potenciado por IA** que analiza el contexto del mensaje antes de actuar.
 - **Filtro Anti-NSFW (IA):** Detecta y elimina imágenes y stickers con contenido inapropiado (+18) automáticamente.
-- **Sistema de Infracciones:** 1ra = advertencia, 2da = expulsión
+- **Sistema de Infracciones:** Totalmente configurable (por defecto 4 faltas = expulsión automática).
 - **Sistema de Niveles (XP):** Gamificación, los usuarios ganan experiencia por mensaje
 - **Bienvenida/Despedida Personalizable** con variables (`{user}`, `{group}`)
 - **Diversión y Utilidad:** Conversor de stickers, recordatorios, encuestas, traductor, clima
@@ -33,10 +33,25 @@ apt install -y nodejs
 # 3. Instalar dependencias
 npm install
 
-# 4. Configurar .env
+# 4. Configurar el archivo de variables de entorno (.env)
 cp .env.example .env
 nano .env
-# → OWNER_NUMBER=tu_numero_con_codigo_pais (ej: 5491112345678)
+
+# --- CÓMO CONFIGURAR EL .ENV ---
+# En el archivo .env deberás configurar:
+# 1. OWNER_NUMBER: Tu número de WhatsApp con código de país (ej: 51999888777).
+# 2. MAX_WARNINGS: Límite de faltas permitidas antes de la expulsión (ej: 4).
+# 3. EL MOTOR DE INTELIGENCIA ARTIFICIAL (Elige una opción):
+#
+#    Opción A (Recomendada: Groq - Ultra Rápido y Gratis):
+#    - Borra o deja vacío GEMINI_API_KEY=
+#    - Pon tu API Key en OPENAI_API_KEY=gsk_... (consíguela en console.groq.com)
+#    - Asegúrate de usar OPENAI_BASE_URL=https://api.groq.com/openai/v1
+#    - Usa un modelo válido: OPENAI_MODEL=llama-3.3-70b-versatile
+#
+#    Opción B (Google Gemini Studio):
+#    - Pon tu API Key en GEMINI_API_KEY=AIzaSy... (consíguela en aistudio.google.com)
+#    - Deja OPENAI_API_KEY vacío.
 
 # 5. Ejecutar en desarrollo
 npm run dev
@@ -98,14 +113,13 @@ npm run dev
 | `!claro` | Descargar archivo(s) de configuración Claro |
 | `!injector` | Descargar APK(s) de Injector |
 
-## 🛡️ Auto-Moderación
+## 🛡️ Auto-Moderación Inteligente
 
 Detecta automáticamente:
-- Links de grupos de WhatsApp (`chat.whatsapp.com`)
-- Links de Telegram (`t.me`)
-- Links de Discord (`discord.gg`)
-- Mensajes de ventas/promoción con datos de contacto
-- Spam/flood (5+ mensajes en 10 segundos)
+- **Links No Autorizados:** WhatsApp (`chat.whatsapp.com`), Telegram (`t.me`), Discord (`discord.gg`).
+- **Spam/Flood:** Si un usuario envía más de 5 mensajes en menos de 10 segundos.
+- **Publicidad y Ventas (IA):** El bot intercepta mensajes que contengan palabras como "vendo", "precio" o "oferta". Luego, **le envía el mensaje a la IA para confirmar su contexto**. Si la IA determina que es spam de ventas comercial, el bot elimina el mensaje y aplica una falta.
+- **Contenido +18 (IA):** Usa visión artificial para escanear imágenes y stickers.
 
 **Los admins están exentos de la moderación automática.**
 
