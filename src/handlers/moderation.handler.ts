@@ -1,6 +1,7 @@
 import { WASocket, proto } from '@whiskeysockets/baileys';
 import { config } from '../config';
 import { addWarning, getWarningCount, resetWarnings } from '../services/db.service';
+import { analyzeSalesContent } from '../services/ai.service';
 
 // ── Anti-Spam: track message timestamps per user ──────────────
 const messageTimestamps = new Map<string, number[]>();
@@ -48,7 +49,7 @@ export interface ModerationResult {
  * Check a message for rule violations.
  * Returns a ModerationResult indicating if the message should be moderated.
  */
-export function checkMessage(body: string, senderJid: string, groupJid: string): ModerationResult {
+export async function checkMessage(body: string, senderJid: string, groupJid: string): Promise<ModerationResult> {
     // ── Check forbidden links ──
     for (const pattern of FORBIDDEN_LINK_PATTERNS) {
         if (pattern.test(body)) {
@@ -78,15 +79,21 @@ export function checkMessage(body: string, senderJid: string, groupJid: string):
     }
 
     // ── Check sales/promotion ──
-    const hasSalesKeyword = SALES_KEYWORDS.some((kw) => lowerBody.includes(kw));
-    const hasContact = CONTACT_PATTERNS.some((pattern) => pattern.test(body));
-
-    if (hasSalesKeyword && hasContact) {
-        return {
-            violation: true,
-            type: 'sales',
-            reason: 'Promoción de ventas / publicidad no autorizada',
-        };
+    const hasSalesKeyword = SALES_KEYWORDS.some((kw) => {
+        const regex = new RegExp(`(^|\\s|[^a-záéíóúñ])${escapeRegex(kw)}($|\\s|[^a-záéíóúñ])`, 'i');
+        return regex.test(lowerBody);
+    });
+    
+    // Si tiene una palabra clave de ventas, le preguntamos a la IA para confirmar si es spam o no
+    if (hasSalesKeyword) {
+        const isSales = await analyzeSalesContent(body);
+        if (isSales) {
+            return {
+                violation: true,
+                type: 'sales',
+                reason: 'Promoción de ventas / publicidad no autorizada',
+            };
+        }
     }
 
     // ── Check spam/flood ──

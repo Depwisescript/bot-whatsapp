@@ -245,3 +245,25 @@ export async function analyzeImageContent(buffer: Buffer, mimeType: string): Pro
         return false; // On error, assume safe to avoid blocking normal traffic
     }
 }
+
+/**
+ * Analyze text to determine if it is a sales/spam message using AI.
+ */
+export async function analyzeSalesContent(text: string): Promise<boolean> {
+    try {
+        const prompt = `Actúa como un moderador de grupo. Analiza el siguiente mensaje de WhatsApp. ¿Es un mensaje de ventas, publicidad comercial, spam o promoción de servicios no solicitados? 
+Responde ÚNICAMENTE con la palabra 'SI' si es ventas/publicidad, o 'NO' si es una conversación normal o una pregunta. No des explicaciones.
+
+Mensaje a analizar: "${text}"`;
+
+        const responseText = await generateAIResponse(prompt);
+        const upper = responseText.trim().toUpperCase();
+        
+        console.log(`[AI MODERATION] Mensaje: "${text.substring(0, 30)}..." -> Respuesta IA: ${upper}`);
+        
+        return upper.includes('SI') || upper.includes('SÍ');
+    } catch (err: any) {
+        console.error('[AI MODERATION] Error:', err.message || err);
+        return false;
+    }
+}

@@ -240,7 +240,7 @@ export function setupMessageHandler(sock: WASocket): void {
 
                 // ── Auto-moderation (skip for admins and owner) ──
                 if (!isAdmin && !isOwner) {
-                    const moderationResult = checkMessage(body, senderJid, groupJid);
+                    const moderationResult = await checkMessage(body, senderJid, groupJid);
 
                     if (moderationResult.violation) {
                         await handleViolation(sock, message, groupJid, senderJid, moderationResult);
