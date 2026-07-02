@@ -162,7 +162,7 @@ export async function handleViolation(
     } else {
         // ── Strike 1: WARNING ──
         await sock.sendMessage(groupJid, {
-            text: `⚠️ *ADVERTENCIA* para @${senderJid.split('@')[0]}\n\n📋 Razón: ${result.reason}\n🔢 Advertencias: ${warningCount}/${config.maxWarnings}\n\n⚡ *La próxima infracción resultará en expulsión inmediata.*\n\n_Revisa las reglas con !rules_`,
+            text: `⚠️ *ADVERTENCIA* para @${senderJid.split('@')[0]}\n\n📋 Razón: ${result.reason}\n🔢 Advertencias: ${warningCount}/${config.maxWarnings}\n\n⚡ *Al llegar a las ${config.maxWarnings} faltas serás expulsado(a) del grupo.*\n\n_Revisa las reglas con !rules_`,
             mentions: [senderJid],
         });
     }

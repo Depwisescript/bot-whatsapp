@@ -2,6 +2,7 @@ import { WASocket } from '@whiskeysockets/baileys';
 import { isBanned, getGroupSettings, addAuditLog } from '../services/db.service';
 import { countSharedFiles } from '../services/file.service';
 import { invalidateGroupCache } from './message.handler';
+import { config } from '../config';
 
 /**
  * Replace {user}, {group}, {members} variables in welcome/bye messages.
@@ -56,7 +57,7 @@ export function setupGroupHandler(sock: WASocket): void {
                         }
                     } else {
                         // Default welcome
-                        welcomeText = `👋 ¡Bienvenido/a @${jid.split('@')[0]}!\n\n📜 Recuerda revisar las reglas del grupo con *!rules*\n\n⚠️ *Sistema de moderación activo:*\n• 1ra infracción → Advertencia\n• 2da infracción → Expulsión\n\n📥 *Descarga tu archivo o app:*\n• *!entel* — Archivo Entel\n• *!bitel* — Archivo Bitel\n• *!movistar* — Archivo Movistar\n• *!claro* — Archivo Claro\n• *!injector* — Aplicación Injector\n\n¡Disfruta tu estancia! 🎉`;
+                        welcomeText = `👋 ¡Bienvenido/a @${jid.split('@')[0]}!\n\n📜 Recuerda revisar las reglas del grupo con *!rules*\n\n⚠️ *Sistema de moderación activo:*\n• Al llegar a ${config.maxWarnings} infracciones/faltas → Expulsión automática.\n\n📥 *Descarga tu archivo o app:*\n• *!entel* — Archivo Entel\n• *!bitel* — Archivo Bitel\n• *!movistar* — Archivo Movistar\n• *!claro* — Archivo Claro\n• *!injector* — Aplicación Injector\n\n¡Disfruta tu estancia! 🎉`;
                     }
 
                     await sock.sendMessage(groupJid, {

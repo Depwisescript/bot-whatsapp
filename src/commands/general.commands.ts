@@ -84,8 +84,8 @@ export function registerGeneralCommands(): void {
 5️⃣ No enviar contenido inapropiado
 
 ⚠️ *Sistema de advertencias:*
-• 1ra infracción → Advertencia + eliminación del mensaje
-• 2da infracción → Expulsión inmediata del grupo
+• 1ra a ${config.maxWarnings - 1}ra infracción → Advertencia + eliminación del mensaje
+• ${config.maxWarnings}ta infracción → Expulsión inmediata del grupo
 
 _Los admins están exentos de la moderación automática._`;
 

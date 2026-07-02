@@ -38,7 +38,7 @@ export const config = {
     antiSpamWindowSeconds: 10,
 
     /** Max warnings before auto-kick */
-    maxWarnings: 2,
+    maxWarnings: parseInt(process.env.MAX_WARNINGS || '4', 10),
 
     /** Banned words (comma-separated in .env, e.g. "puta,mierda,hdp") */
     bannedWords: (process.env.BANNED_WORDS || '')
