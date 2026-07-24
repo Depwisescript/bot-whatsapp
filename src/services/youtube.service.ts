@@ -57,7 +57,7 @@ export async function downloadAudio(url: string, title: string): Promise<Downloa
     
     try {
         // Usa yt-dlp directamente desde el sistema
-        await execAsync(`yt-dlp --extractor-args "youtube:player_client=android" --extract-audio --audio-format mp3 --audio-quality 0 --no-warnings -o "${filePath}" "${url}"`);
+        await execAsync(`yt-dlp --extractor-args "youtube:player_client=ios" --extract-audio --audio-format mp3 --audio-quality 0 --no-warnings -o "${filePath}" "${url}"`);
         
         const stats = fs.statSync(filePath);
         const sizeMB = stats.size / (1024 * 1024);
@@ -83,7 +83,7 @@ export async function downloadVideo(url: string, title: string): Promise<Downloa
     
     try {
         // Usa yt-dlp directamente desde el sistema (max 720p para compatibilidad de WhatsApp)
-        await execAsync(`yt-dlp --extractor-args "youtube:player_client=android" -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-warnings -o "${filePath}" "${url}"`);
+        await execAsync(`yt-dlp --extractor-args "youtube:player_client=ios" -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-warnings -o "${filePath}" "${url}"`);
         
         const stats = fs.statSync(filePath);
         const sizeMB = stats.size / (1024 * 1024);
