@@ -47,11 +47,18 @@ export function registerGeneralCommands(): void {
             }
 
             // Files commands
-            const fileCmds = commands.filter((c) => !c.adminOnly && ['archivo', 'entel', 'bitel', 'movistar', 'claro', 'injector'].includes(c.name));
-            if (fileCmds.length > 0) {
-                text += '📁 *Archivos:*\n';
+            const { listSharedFiles } = await import('../services/file.service');
+            const files = listSharedFiles(ctx.groupJid);
+            const dynamicFileCategories = [...new Set(files.map(f => f.name))];
+
+            const fileCmds = commands.filter((c) => !c.adminOnly && ['archivo'].includes(c.name));
+            if (fileCmds.length > 0 || dynamicFileCategories.length > 0) {
+                text += '📁 *Archivos y Descargas:*\n';
                 fileCmds.forEach((cmd) => {
                     text += `  • *${config.prefix}${cmd.name}* — ${cmd.description}\n`;
+                });
+                dynamicFileCategories.forEach((cat) => {
+                    text += `  • *${config.prefix}${cat}* — Descargar archivo(s) de ${cat}\n`;
                 });
                 text += '\n';
             }
@@ -372,92 +379,5 @@ _Los admins están exentos de la moderación automática._`;
         },
     });
 
-    // ── Helper to send category files ───────────────────────────
-    const sendCategoryFiles = async (ctx: CommandContext, category: string, description: string) => {
-        const { getSharedFiles, getSharedFilesGlobal, readFileBuffer } = await import('../services/file.service');
-        
-        let files = getSharedFiles(category, ctx.groupJid);
-        if (files.length === 0) {
-            files = getSharedFilesGlobal(category);
-        }
 
-        if (files.length === 0) {
-            await ctx.sock.sendMessage(ctx.groupJid, {
-                text: `📭 Aún no se ha subido ningún archivo de *${category.toUpperCase()}*.\n\n👑 _Un admin puede subir uno o más respondiendo a un archivo con:_\n*!setarchivo ${category}*`,
-            });
-            return;
-        }
-
-        for (const file of files) {
-            const buffer = readFileBuffer(file.file_path);
-            if (!buffer) {
-                await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: `❌ Error al leer ${file.original_name} del servidor.`,
-                });
-                continue;
-            }
-
-            await ctx.sock.sendMessage(ctx.groupJid, {
-                document: buffer,
-                mimetype: file.mime_type,
-                fileName: file.original_name,
-                caption: `📥 *${category.toUpperCase()}* — ${file.original_name}\n${description}`,
-            });
-        }
-    };
-
-    // ── !entel ──────────────────────────────────────────────────
-    registerCommand({
-        name: 'entel',
-        description: 'Descargar archivo(s) de configuración Entel',
-        usage: '!entel',
-        adminOnly: false,
-        execute: async (ctx: CommandContext) => {
-            await sendCategoryFiles(ctx, 'entel', '📱 Archivo de configuración Entel');
-        },
-    });
-
-    // ── !bitel ──────────────────────────────────────────────────
-    registerCommand({
-        name: 'bitel',
-        description: 'Descargar archivo(s) de configuración Bitel',
-        usage: '!bitel',
-        adminOnly: false,
-        execute: async (ctx: CommandContext) => {
-            await sendCategoryFiles(ctx, 'bitel', '📱 Archivo de configuración Bitel');
-        },
-    });
-
-    // ── !movistar ───────────────────────────────────────────────
-    registerCommand({
-        name: 'movistar',
-        description: 'Descargar archivo(s) de configuración Movistar',
-        usage: '!movistar',
-        adminOnly: false,
-        execute: async (ctx: CommandContext) => {
-            await sendCategoryFiles(ctx, 'movistar', '📱 Archivo de configuración Movistar');
-        },
-    });
-
-    // ── !claro ──────────────────────────────────────────────────
-    registerCommand({
-        name: 'claro',
-        description: 'Descargar archivo(s) de configuración Claro',
-        usage: '!claro',
-        adminOnly: false,
-        execute: async (ctx: CommandContext) => {
-            await sendCategoryFiles(ctx, 'claro', '📱 Archivo de configuración Claro');
-        },
-    });
-
-    // ── !injector ──────────────────────────────────────────────────
-    registerCommand({
-        name: 'injector',
-        description: 'Descargar APK(s) de Injector',
-        usage: '!injector',
-        adminOnly: false,
-        execute: async (ctx: CommandContext) => {
-            await sendCategoryFiles(ctx, 'injector', '📲 APK de Injector');
-        },
-    });
 }
