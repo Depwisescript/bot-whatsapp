@@ -460,7 +460,7 @@ export function registerAdminCommands(): void {
                 const sizeStr = savedFile.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
 
                 await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: `✅ *Archivo guardado exitosamente*\n\n📄 *Nombre:* ${savedFile.name}\n📎 *Original:* ${savedFile.original_name}\n📦 *Tamaño:* ${sizeStr}\n\n👥 Cualquier miembro puede descargarlo con:\n*!archivo ${savedFile.name}*`,
+                    text: `✅ *Archivo guardado exitosamente*\n\n📄 *Nombre:* ${savedFile.name}\n📎 *Original:* ${savedFile.original_name}\n📦 *Tamaño:* ${sizeStr}\n\n👥 Cualquier miembro puede descargarlo con:\n*!${savedFile.name}*`,
                 });
             } catch (err) {
                 console.error('Error downloading/saving file:', err);

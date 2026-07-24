@@ -339,7 +339,56 @@ export function setupMessageHandler(sock: WASocket): void {
                 if (!commandName) continue;
 
                 const command = getCommand(commandName);
-                if (!command) continue;
+                if (!command) {
+                    // Try to see if it's a dynamic file command
+                    const { getSharedFiles, getSharedFilesGlobal, readFileBuffer } = await import('../services/file.service');
+                    let categoryFiles = getSharedFiles(commandName, groupJid);
+                    if (categoryFiles.length === 0) {
+                        categoryFiles = getSharedFilesGlobal(commandName);
+                    }
+                    
+                    if (categoryFiles.length > 0) {
+                        // Apply cooldown
+                        const now = Date.now();
+                        const userKey = `${groupJid}:${senderJid}`;
+                        const lastTime = commandCooldowns.get(userKey) || 0;
+                        if (now - lastTime < NORMAL_COOLDOWN_MS) {
+                            continue; // Silent cooldown
+                        }
+                        
+                        let success = false;
+                        for (const file of categoryFiles) {
+                            const buffer = readFileBuffer(file.file_path);
+                            if (buffer) {
+                                await sock.sendMessage(groupJid, {
+                                    document: buffer,
+                                    mimetype: file.mime_type,
+                                    fileName: file.original_name,
+                                    caption: `📥 *${file.name.toUpperCase()}* — ${file.original_name}`,
+                                });
+                                success = true;
+                            }
+                        }
+                        if (success) {
+                            commandCooldowns.set(userKey, now);
+                            // Log command usage
+                            console.log(`[DYNAMIC CMD] ${senderJid.split('@')[0]} in ${groupJid} used !${commandName}`);
+                            // Leveling XP for valid dynamic command
+                            const groupSettings = getGroupSettings(groupJid);
+                            if (groupSettings.levels_enabled) {
+                                addUserXP(groupJid, senderJid);
+                            }
+                        } else {
+                            await sock.sendMessage(groupJid, {
+                                text: `❌ Error al leer los archivos de *${commandName}*.`,
+                            });
+                        }
+                        continue;
+                    }
+
+                    // Not a registered command and not a file category
+                    continue;
+                }
 
                 // Check admin-only permission
                 if (command.adminOnly && !isAdmin && !isOwner) {
