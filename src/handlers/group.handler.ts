@@ -1,6 +1,6 @@
 import { WASocket } from '@whiskeysockets/baileys';
 import { isBanned, getGroupSettings, addAuditLog } from '../services/db.service';
-import { countSharedFiles } from '../services/file.service';
+import { countSharedFiles, listSharedFiles } from '../services/file.service';
 import { invalidateGroupCache } from './message.handler';
 import { config } from '../config';
 
@@ -56,8 +56,15 @@ export function setupGroupHandler(sock: WASocket): void {
                             welcomeText = replaceVars(settings.welcome_msg, jid, 'el grupo', 0);
                         }
                     } else {
-                        // Default welcome
-                        welcomeText = `👋 ¡Bienvenido/a @${jid.split('@')[0]}!\n\n📜 Recuerda revisar las reglas del grupo con *!rules*\n\n⚠️ *Sistema de moderación activo:*\n• Al llegar a ${config.maxWarnings} infracciones/faltas → Expulsión automática.\n\n📥 *Descarga tu archivo o app:*\n• *!entel* — Archivo Entel\n• *!bitel* — Archivo Bitel\n• *!movistar* — Archivo Movistar\n• *!claro* — Archivo Claro\n• *!injector* — Aplicación Injector\n\n¡Disfruta tu estancia! 🎉`;
+                        // Default welcome (Inteligente)
+                        const files = listSharedFiles(groupJid);
+                        const categories = Array.from(new Set(files.map(f => f.name)));
+                        let filesSection = '';
+                        if (categories.length > 0) {
+                            filesSection = '\n\n📥 *Descarga tu archivo o app:*\n' + categories.map(c => `• *!${c}*`).join('\n');
+                        }
+
+                        welcomeText = `👋 ¡Bienvenido/a @${jid.split('@')[0]}!\n\n📜 Recuerda revisar las reglas del grupo con *!rules*\n\n⚠️ *Sistema de moderación activo:*\n• Al llegar a ${config.maxWarnings} infracciones/faltas → Expulsión automática.${filesSection}\n\n¡Disfruta tu estancia! 🎉`;
                     }
 
                     await sock.sendMessage(groupJid, {
