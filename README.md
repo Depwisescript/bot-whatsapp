@@ -47,7 +47,7 @@ nano .env
 #    - Borra o deja vacío GEMINI_API_KEY=
 #    - Pon tu API Key en OPENAI_API_KEY=gsk_... (consíguela en console.groq.com)
 #    - Asegúrate de usar OPENAI_BASE_URL=https://api.groq.com/openai/v1
-#    - Usa un modelo válido: OPENAI_MODEL=llama-3.3-70b-versatile
+#    - Usa un modelo válido: OPENAI_MODEL=openai/gpt-oss-120b
 #
 #    Opción B (Google Gemini Studio):
 #    - Pon tu API Key en GEMINI_API_KEY=AIzaSy... (consíguela en aistudio.google.com)
