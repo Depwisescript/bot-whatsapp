@@ -56,11 +56,9 @@ export async function downloadAudio(url: string, title: string): Promise<Downloa
     const filePath = path.join(tempDir, `${safeTitle}_audio_${Date.now()}.mp3`);
     
     try {
-        // Usa yt-dlp directamente desde el sistema
-        const cookiesPath = path.resolve('./cookies.txt');
-        const cookiesArg = fs.existsSync(cookiesPath) ? `--cookies "${cookiesPath}"` : '';
-
-        await execAsync(`yt-dlp ${cookiesArg} --extractor-args "youtube:player_client=ios" --extract-audio --audio-format mp3 --audio-quality 0 --no-warnings -o "${filePath}" "${url}"`);
+        // Usa yt-dlp con OAuth2 para saltar el bloqueo
+        const authArgs = '--username oauth2 --password ""';
+        await execAsync(`yt-dlp ${authArgs} --extractor-args "youtube:player_client=ios" --extract-audio --audio-format mp3 --audio-quality 0 --no-warnings -o "${filePath}" "${url}"`);
         
         const stats = fs.statSync(filePath);
         const sizeMB = stats.size / (1024 * 1024);
@@ -85,11 +83,9 @@ export async function downloadVideo(url: string, title: string): Promise<Downloa
     const filePath = path.join(tempDir, `${safeTitle}_video_${Date.now()}.mp4`);
     
     try {
-        // Usa yt-dlp directamente desde el sistema (max 720p para compatibilidad de WhatsApp)
-        const cookiesPath = path.resolve('./cookies.txt');
-        const cookiesArg = fs.existsSync(cookiesPath) ? `--cookies "${cookiesPath}"` : '';
-
-        await execAsync(`yt-dlp ${cookiesArg} --extractor-args "youtube:player_client=ios" -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-warnings -o "${filePath}" "${url}"`);
+        // Usa yt-dlp con OAuth2
+        const authArgs = '--username oauth2 --password ""';
+        await execAsync(`yt-dlp ${authArgs} --extractor-args "youtube:player_client=ios" -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-warnings -o "${filePath}" "${url}"`);
         
         const stats = fs.statSync(filePath);
         const sizeMB = stats.size / (1024 * 1024);
