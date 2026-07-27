@@ -47,7 +47,7 @@ class EHIDecryptor:
 
     @staticmethod
     def _decrypt_xor_layer(ciphertext_str: str, key: str) -> Optional[str]:
-        if not ciphertext_str or not ciphertext_str.strip():
+        if not ciphertext_str or not isinstance(ciphertext_str, str) or not ciphertext_str.strip() or not key or not isinstance(key, str) or len(key) == 0:
             return ciphertext_str
             
         with contextlib.suppress(Exception):
@@ -96,6 +96,8 @@ class EHIDecryptor:
 
     @staticmethod
     def _decode_inner_fields(parsed_json: Dict[str, Any], salt_key: str) -> Dict[str, Any]:
+        if not isinstance(parsed_json, dict):
+            return {"raw_data": parsed_json} if parsed_json is not None else {}
         cleaned_json = {}
         vital_keys = {"overwriteServerData"}
         
@@ -157,8 +159,9 @@ class EHIDecryptor:
             
             p_len = struct.unpack('>I', p_len_bytes)[0]
             f.read(8)
-            return f.read(p_len)
-        except struct.error:
+            res = f.read(p_len)
+            return res if len(res) > 0 else None
+        except Exception:
             return None
 
     @staticmethod
@@ -178,35 +181,41 @@ class EHIDecryptor:
 
     @classmethod
     def execute(cls, file_bytes: bytes) -> Optional[str]:
-        if not ARGON2_AVAILABLE:
-            return "ERROR: Falta la librería argon2-cffi en la VPS. Instálala corriendo: pip install argon2-cffi"
+        try:
+            if not ARGON2_AVAILABLE:
+                return "ERROR: Falta la librería argon2-cffi en la VPS. Instálala corriendo: pip install argon2-cffi"
 
-        payload = cls._parse_ehi_bytes(file_bytes)
-        if not payload:
-            return "ERROR: Estructura del archivo .ehi inválida o no reconocida."
+            parsed = cls._parse_ehi_bytes(file_bytes)
+            candidates = [parsed] if parsed else []
+            if file_bytes not in candidates:
+                candidates.append(file_bytes)
 
-        config, matched_iv = None, None
+            config, matched_iv = None, None
 
-        # Deep Validation IV Decryption Loop
-        for iv in cls.BYPASS_IVS + cls.STANDARD_IVS:
-            with contextlib.suppress(Exception):
-                c1 = AES.new(EHIConstants.L1_KEY, AES.MODE_CBC, iv)
-                l1_text = unpad(c1.decrypt(payload), 16).decode('utf-8', errors='replace')
-                
-                if (parts := l1_text.split(":")) and len(parts) >= 3:
-                    c2 = AES.new(EHIConstants.L2_KEY_STATIC, AES.MODE_CBC, base64.b64decode(parts[0]))
-                    garbage = unpad(c2.decrypt(base64.b64decode(parts[2])), 16)
+            # Deep Validation IV Decryption Loop over candidate payloads
+            for cand_payload in candidates:
+                if not cand_payload: continue
+                for iv in cls.BYPASS_IVS + cls.STANDARD_IVS:
+                    with contextlib.suppress(Exception):
+                        c1 = AES.new(EHIConstants.L1_KEY, AES.MODE_CBC, iv)
+                        l1_text = unpad(c1.decrypt(cand_payload), 16).decode('utf-8', errors='replace')
+                        
+                        if (parts := l1_text.split(":")) and len(parts) >= 3:
+                            c2 = AES.new(EHIConstants.L2_KEY_STATIC, AES.MODE_CBC, base64.b64decode(parts[0]))
+                            garbage = unpad(c2.decrypt(base64.b64decode(parts[2])), 16)
 
-                    final_raw = cls._xxtea_decrypt(garbage, EHIConstants.EOO_MASTER_KEY)
-                    if (start := final_raw.find(b'{')) != -1:
-                        config = json.loads(final_raw[start:].decode('utf-8', errors='ignore'))
-                        matched_iv = iv
-                        break 
+                            final_raw = cls._xxtea_decrypt(garbage, EHIConstants.EOO_MASTER_KEY)
+                            if (start := final_raw.find(b'{')) != -1:
+                                config = json.loads(final_raw[start:].decode('utf-8', errors='ignore'))
+                                matched_iv = iv
+                                break 
+                if config:
+                    break
 
-        if not config:
-            return "ERROR: El archivo .ehi utiliza una protección o cifrado privado no soportado en este momento." 
+            if not config:
+                return "ERROR: El archivo .ehi utiliza una versión o cifrado privado de HTTP Injector no compatible con los IVs públicos actuales." 
 
-        target_salt = config.get('configSalt', "EVZJNI")
+            target_salt = config.get('configSalt') or "EVZJNI"
 
         if matched_iv in cls.BYPASS_IVS:
             parsed_final = config
@@ -255,7 +264,8 @@ class EHIDecryptor:
             f"{'='*30}\n"
             f"code : @Dan3651"
         )
-
+        except Exception as e:
+            return f"ERROR: Excepción procesando .ehi ({type(e).__name__}: {str(e)})"
 
 def run(file_bytes: bytes) -> Optional[str]:
     return EHIDecryptor.execute(file_bytes)

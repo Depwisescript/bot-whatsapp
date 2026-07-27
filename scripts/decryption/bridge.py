@@ -49,19 +49,20 @@ def main():
         # Intentar según extensión principal
         if ext == ".hc":
             try: result = HTTPCUSTOM.run(file_bytes)
-            except Exception: pass
+            except Exception as e: first_error = f"ERROR en módulo HTTP Custom: {str(e)}"
         elif ext == ".ehi":
             try: result = HTTPINJECTOR.run(file_bytes)
-            except Exception: pass
+            except Exception as e: first_error = f"ERROR en módulo HTTP Injector (.ehi): {str(e)}"
         elif ext in [".npv", ".npvt", ".npvtsub"]:
             try: result = NPVTUNNEL.run(file_bytes)
-            except Exception: pass
+            except Exception as e: first_error = f"ERROR en módulo NPV Tunnel: {str(e)}"
         elif ext == ".dt":
             try: result = DARKTUNNEL.run(file_bytes)
-            except Exception: pass
+            except Exception as e: first_error = f"ERROR en módulo DarkTunnel: {str(e)}"
 
-        if result and result.startswith("ERROR:"):
-            first_error = result
+        if result and isinstance(result, str) and result.startswith("ERROR:"):
+            if not first_error:
+                first_error = result
             result = None
         
         # Si falló o no tiene extensión conocida, probar todos uno por uno en orden
@@ -73,10 +74,16 @@ def main():
                     if res and isinstance(res, str) and len(res.strip()) > 10 and not res.startswith("ERROR:"):
                         result = res
                         break
-                    elif res and res.startswith("ERROR:") and not first_error:
+                    elif res and isinstance(res, str) and res.startswith("ERROR:") and not first_error:
                         first_error = res
-                except Exception:
+                except Exception as e:
                     continue
+
+        if not result and not first_error and ext == ".ehi":
+            first_error = "ERROR: No fue posible descifrar el archivo .ehi con las claves actuales. Es probable que utilice una versión reciente de HTTP Injector con cifrado privado/personalizado no soportado por la comunidad actualmente."
+
+    if result and not isinstance(result, str):
+        result = str(result)
 
     if result and not result.startswith("ERROR:"):
         print(result)
