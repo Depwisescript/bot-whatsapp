@@ -4,3 +4,6 @@ auth_info/
 data/
 .env
 *.log
+venv/
+__pycache__/
+*.pyc

@@ -665,4 +665,116 @@ export function registerExtraCommands(): void {
             }
         },
     });
+
+    // ── !decrypt / !revelar / !unconfig ─────────────────────────
+    const executeDecrypt = async (ctx: CommandContext) => {
+        const argText = ctx.args.join(' ').trim();
+        const docMsg = ctx.message.message?.documentMessage || ctx.quotedMessage?.documentMessage;
+        
+        if (!docMsg && !argText.startsWith('darktunnel://') && !argText.startsWith('ssc://')) {
+            await ctx.sock.sendMessage(ctx.groupJid, {
+                text: '🔓 *Desencriptador VPN Pro (HTTP Custom, Injector, NPV, DarkTunnel, SSC)*\n\n⚠️ *Cómo usarlo:*\n1️⃣ Responde a un documento (*.hc*, *.ehi*, o *NPV*) con el comando *!decrypt* o *!revelar*.\n2️⃣ O pega directamente un enlace:\n`!decrypt darktunnel://...` o `!decrypt ssc://...`'
+            });
+            return;
+        }
+
+        await ctx.sock.sendMessage(ctx.groupJid, { text: '⚙️ *Analizando y rompiendo el cifrado de la configuración...*' });
+
+        const { decryptVPNConfig, cleanupDecryptFile, decryptTempDir } = await import('../services/decryption.service');
+        const fs = await import('fs');
+        const path = await import('path');
+
+        let targetToDecrypt = argText;
+        let tempFilePath = '';
+
+        try {
+            if (docMsg) {
+                const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
+                const msgType = 'documentMessage';
+                const fakeMsg = {
+                    key: ctx.message.key,
+                    message: { [msgType]: docMsg },
+                };
+                const buffer = await downloadMediaMessage(
+                    fakeMsg as any,
+                    'buffer',
+                    {},
+                    {
+                        logger: undefined as any,
+                        reuploadRequest: ctx.sock.updateMediaMessage,
+                    }
+                );
+                
+                const origName = docMsg.fileName || `config_${Date.now()}.bin`;
+                tempFilePath = path.join(decryptTempDir, `${Date.now()}_${origName}`);
+                fs.writeFileSync(tempFilePath, buffer);
+                targetToDecrypt = tempFilePath;
+            }
+
+            const result = await decryptVPNConfig(targetToDecrypt);
+
+            if (!result.success || !result.output) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `❌ *Error en la desencriptación:*\n_${result.error || 'Archivo protegido con un algoritmo desconocido o corrupto.'}_`
+                });
+                return;
+            }
+
+            const decryptedText = result.output;
+            const docName = docMsg ? (docMsg.fileName || 'archivo.config') : (targetToDecrypt.startsWith('darktunnel://') ? 'DarkTunnel Link' : 'SSC Link');
+
+            let formattedMsg = `🔓 *CONFIGURACIÓN REVELADA EXITOSAMENTE* 🔓\n\n📄 *Origen:* _${docName}_\n`;
+            
+            if (decryptedText.length > 3500) {
+                formattedMsg += `\n⚠️ _El resultado es extenso, adjuntando configuración como archivo legible:_`;
+                await ctx.sock.sendMessage(ctx.groupJid, { text: formattedMsg });
+                
+                const outFilePath = path.join(decryptTempDir, `config_revelada_${Date.now()}.json`);
+                fs.writeFileSync(outFilePath, decryptedText, 'utf-8');
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    document: { url: outFilePath },
+                    mimetype: 'application/json',
+                    fileName: `revelado_${docName}.json`,
+                    caption: `✅ Configuración completa desencriptada.`
+                });
+                cleanupDecryptFile(outFilePath);
+            } else {
+                formattedMsg += `\n\`\`\`\n${decryptedText}\n\`\`\``;
+                await ctx.sock.sendMessage(ctx.groupJid, { text: formattedMsg });
+            }
+
+        } catch (err) {
+            console.error('Error procesando desencriptación:', err);
+            await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ Hubo un problema procesando la desencriptación en el servidor.' });
+        } finally {
+            if (tempFilePath) {
+                cleanupDecryptFile(tempFilePath);
+            }
+        }
+    };
+
+    registerCommand({
+        name: 'decrypt',
+        description: 'Desencriptar archivos de HTTP Custom, Injector, NPV, DarkTunnel o SSC',
+        usage: '!decrypt (responde a un archivo .ehi/.hc o con link)',
+        adminOnly: false,
+        execute: executeDecrypt,
+    });
+
+    registerCommand({
+        name: 'revelar',
+        description: 'Revelar configuración de un archivo de VPN enmascarado',
+        usage: '!revelar (responde a un archivo .ehi/.hc o con link)',
+        adminOnly: false,
+        execute: executeDecrypt,
+    });
+
+    registerCommand({
+        name: 'unconfig',
+        description: 'Extraer datos de un túnel VPN encriptado',
+        usage: '!unconfig (responde a un archivo o link)',
+        adminOnly: false,
+        execute: executeDecrypt,
+    });
 }
+
