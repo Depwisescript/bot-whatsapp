@@ -25,10 +25,19 @@ export interface DecryptionResult {
 export async function decryptVPNConfig(target: string): Promise<DecryptionResult> {
     try {
         // Try venv python first, fallback to python3 in system
-        const venvPython = path.resolve('./scripts/decryption/venv/bin/python3');
-        const pythonCmd = fs.existsSync(venvPython) ? `"${venvPython}"` : 'python3';
+        const venvPython1 = path.resolve('./scripts/decryption/venv/bin/python3');
+        const venvPython2 = path.resolve(__dirname, '../../scripts/decryption/venv/bin/python3');
+        let pythonCmd = 'python3';
+        if (fs.existsSync(venvPython1)) {
+            pythonCmd = `"${venvPython1}"`;
+        } else if (fs.existsSync(venvPython2)) {
+            pythonCmd = `"${venvPython2}"`;
+        }
         
-        const bridgeScript = path.resolve('./scripts/decryption/bridge.py');
+        const bridgeScript1 = path.resolve('./scripts/decryption/bridge.py');
+        const bridgeScript2 = path.resolve(__dirname, '../../scripts/decryption/bridge.py');
+        const bridgeScript = fs.existsSync(bridgeScript1) ? bridgeScript1 : bridgeScript2;
+        
         if (!fs.existsSync(bridgeScript)) {
             return {
                 success: false,
@@ -52,12 +61,17 @@ export async function decryptVPNConfig(target: string): Promise<DecryptionResult
         };
     } catch (err: any) {
         console.error('Error en decryptVPNConfig:', err);
-        let errorMsg = 'No se pudo desencriptar la configuración. Formato no soportado o archivo corrupto.';
-        if (err && err.stdout) {
+        let errorMsg = 'No se pudo desencriptar la configuración. Formato no soportado o archivo protegido.';
+        const outputToParse = (err && err.stdout && err.stdout.trim()) || (err && err.stderr && err.stderr.trim()) || '';
+        if (outputToParse) {
             try {
-                const parsed = JSON.parse(err.stdout.trim());
+                const parsed = JSON.parse(outputToParse);
                 if (parsed.error) errorMsg = parsed.error;
-            } catch {}
+            } catch {
+                if (outputToParse.includes("Falta") || outputToParse.includes("ERROR:") || outputToParse.includes("ModuleNotFoundError")) {
+                    errorMsg = `⚠️ Error del motor de desencriptación: ${outputToParse}`;
+                }
+            }
         }
         return {
             success: false,

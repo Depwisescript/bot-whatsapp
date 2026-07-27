@@ -179,11 +179,11 @@ class EHIDecryptor:
     @classmethod
     def execute(cls, file_bytes: bytes) -> Optional[str]:
         if not ARGON2_AVAILABLE:
-            return None
+            return "ERROR: Falta la librería argon2-cffi en la VPS. Instálala corriendo: pip install argon2-cffi"
 
         payload = cls._parse_ehi_bytes(file_bytes)
         if not payload:
-            return None
+            return "ERROR: Estructura del archivo .ehi inválida o no reconocida."
 
         config, matched_iv = None, None
 
@@ -191,7 +191,7 @@ class EHIDecryptor:
         for iv in cls.BYPASS_IVS + cls.STANDARD_IVS:
             with contextlib.suppress(Exception):
                 c1 = AES.new(EHIConstants.L1_KEY, AES.MODE_CBC, iv)
-                l1_text = unpad(c1.decrypt(payload), 16).decode('utf-8')
+                l1_text = unpad(c1.decrypt(payload), 16).decode('utf-8', errors='replace')
                 
                 if (parts := l1_text.split(":")) and len(parts) >= 3:
                     c2 = AES.new(EHIConstants.L2_KEY_STATIC, AES.MODE_CBC, base64.b64decode(parts[0]))
@@ -204,7 +204,7 @@ class EHIDecryptor:
                         break 
 
         if not config:
-            return None 
+            return "ERROR: El archivo .ehi utiliza una protección o cifrado privado no soportado en este momento." 
 
         target_salt = config.get('configSalt', "EVZJNI")
 
@@ -213,29 +213,30 @@ class EHIDecryptor:
         else:
             target_data = config.get('configData')
             if not target_data or not (aaa_result := cls._decrypt_xor_layer(target_data, target_salt)):
-                return None
+                parsed_final = config
+            else:
+                try:
+                    raw_payload = base64.b64decode(aaa_result)
+                    if len(raw_payload) <= 50:
+                        parsed_final = config
+                    else:
+                        argon_key = hash_secret_raw(
+                            secret=cls._generate_master_key(config), 
+                            salt=raw_payload[0x0a:0x1a], 
+                            time_cost=int.from_bytes(raw_payload[1:5], "little"),
+                            memory_cost=int.from_bytes(raw_payload[5:9], "little"), 
+                            parallelism=raw_payload[9],
+                            hash_len=32, 
+                            type=Type.ID
+                        )
 
-            raw_payload = base64.b64decode(aaa_result)
-            if len(raw_payload) <= 50:
-                return None 
+                        cipher3 = ChaCha20_Poly1305.new(key=argon_key, nonce=raw_payload[0x1a:0x32])
+                        cipher3.update(raw_payload[:0x1a]) # AAD
+                        decrypted_json_bytes = cipher3.decrypt_and_verify(raw_payload[0x32:-16], raw_payload[-16:])
+                        parsed_final = json.loads(decrypted_json_bytes.decode('utf-8', errors='ignore'))
+                except Exception:
+                    parsed_final = config
 
-            try:
-                argon_key = hash_secret_raw(
-                    secret=cls._generate_master_key(config), 
-                    salt=raw_payload[0x0a:0x1a], 
-                    time_cost=int.from_bytes(raw_payload[1:5], "little"),
-                    memory_cost=int.from_bytes(raw_payload[5:9], "little"), 
-                    parallelism=raw_payload[9],
-                    hash_len=32, 
-                    type=Type.ID
-                )
-
-                cipher3 = ChaCha20_Poly1305.new(key=argon_key, nonce=raw_payload[0x1a:0x32])
-                cipher3.update(raw_payload[:0x1a]) # AAD
-                decrypted_json_bytes = cipher3.decrypt_and_verify(raw_payload[0x32:-16], raw_payload[-16:])
-                parsed_final = json.loads(decrypted_json_bytes.decode('utf-8', errors='ignore'))
-            except Exception:
-                return None
         cleaned_final_json = cls._decode_inner_fields(parsed_final, target_salt)
         
         for json_field in ("v2rRawJson", "overwriteServerData"):
