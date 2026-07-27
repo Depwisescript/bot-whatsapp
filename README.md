@@ -11,6 +11,7 @@ Bot de control y moderación para grupos de WhatsApp. Construido con [Baileys](h
 - **Sistema de Niveles (XP):** Gamificación, los usuarios ganan experiencia por mensaje
 - **Bienvenida/Despedida Personalizable** con variables (`{user}`, `{group}`)
 - **Diversión y Utilidad:** Conversor de stickers, recordatorios, encuestas, traductor, clima
+- **🔓 Desencriptador VPN Pro:** Módulo nativo para revelar configuraciones protegidas de HTTP Custom (.hc), HTTP Injector (.ehi), NPV Tunnel, DarkTunnel y SSC Custom directamente desde el chat.
 - **Ban permanente** con auto-kick si reingresa
 - **Slowmode** para limitar la velocidad de mensajes
 
@@ -18,6 +19,7 @@ Bot de control y moderación para grupos de WhatsApp. Construido con [Baileys](h
 
 - **Node.js** 20+ LTS
 - **npm** 9+
+- **Python 3.8+** y `pip` (para el módulo de desencriptación VPN)
 
 ## 🚀 Instalación
 
@@ -26,12 +28,14 @@ Bot de control y moderación para grupos de WhatsApp. Construido con [Baileys](h
 git clone https://github.com/Depwisescript/bot-whatsapp.git
 cd bot-whatsapp
 
-# 2. (VPS Ubuntu) Instalar Node.js 20 LTS
+# 2. (VPS Ubuntu) Instalar Node.js 20 LTS, Python 3 y venv
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
+apt install -y nodejs python3-pip python3-venv
 
-# 3. Instalar dependencias
+# 3. Instalar dependencias Node.js y Python (para Desencriptador VPN)
 npm install
+python3 -m venv scripts/decryption/venv
+./scripts/decryption/venv/bin/pip install pycryptodome argon2-cffi msgpack
 
 # 4. Configurar el archivo de variables de entorno (.env)
 cp .env.example .env
@@ -112,6 +116,19 @@ npm run dev
 | `!movistar` | Descargar archivo(s) de configuración Movistar |
 | `!claro` | Descargar archivo(s) de configuración Claro |
 | `!injector` | Descargar APK(s) de Injector |
+| `!decrypt` / `!revelar` | Desencriptar archivo VPN (.hc, .ehi, NPV) respondiendo o enviando link |
+| `!unconfig` | Alias alternativo para extraer datos de túneles VPN |
+
+## 🔓 Módulo de Desencriptación VPN Pro
+
+El bot cuenta con un motor criptográfico avanzado integrado (Node.js + Python) capaz de romper la ofuscación y extraer los datos de configuraciones de VPN protegidas en milisegundos:
+
+- **Formatos de Archivos Soportados:** HTTP Custom (`.hc`), HTTP Injector (`.ehi`) y NPV Tunnel (`.npv`, `.npvt`).  
+  👉 **Uso:** Envía el archivo al grupo o chat y responde a ese archivo escribiendo `!decrypt`, `!revelar` o `!unconfig`.
+- **Enlaces Soportados:** Dark Tunnel y SSC Custom.  
+  👉 **Uso:** Envía un texto al chat tipo `!decrypt darktunnel://...` o `!revelar ssc://...`.
+
+*Nota: Si la configuración descubierta excede los 3500 caracteres, el bot responderá de forma limpia adjuntando el contenido completo en un archivo `.json` ordenado.*
 
 ## 🛡️ Auto-Moderación Inteligente
 
@@ -148,8 +165,10 @@ cd bot-whatsapp
 # 2. Traer los cambios del repositorio
 git pull origin main
 
-# 3. Instalar dependencias nuevas (si las hay)
+# 3. Instalar dependencias nuevas de Node.js y activar entorno de Python (para VPN Decryptor)
 npm install
+python3 -m venv scripts/decryption/venv
+./scripts/decryption/venv/bin/pip install pycryptodome argon2-cffi msgpack
 
 # 4. Recompilar el código
 npm run build
@@ -197,15 +216,20 @@ src/
 ├── commands/
 │   ├── index.ts          # Registry de comandos
 │   ├── admin.commands.ts # Comandos admin
-│   └── general.commands.ts
+│   ├── general.commands.ts
+│   └── extra.commands.ts # Comandos extra y desencriptación VPN
 ├── handlers/
 │   ├── message.handler.ts  # Router de mensajes
 │   ├── moderation.handler.ts # Auto-moderación
 │   └── group.handler.ts     # Eventos de grupo
 ├── services/
-│   ├── db.service.ts     # SQLite (warnings/bans)
-│   ├── ai.service.ts     # Integración con Gemini AI
-│   └── file.service.ts   # Gestión de archivos compartidos
+│   ├── db.service.ts         # SQLite (warnings/bans)
+│   ├── ai.service.ts         # Integración con Gemini AI
+│   ├── file.service.ts       # Gestión de archivos compartidos
+│   └── decryption.service.ts # Puente Node.js ↔ Python
 └── panel/
     └── panel.ts          # Panel web de administración
+```
+scripts/
+└── decryption/           # Motores Python de criptografía y bridge.py
 ```
