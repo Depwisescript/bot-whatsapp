@@ -217,53 +217,53 @@ class EHIDecryptor:
 
             target_salt = config.get('configSalt') or "EVZJNI"
 
-        if matched_iv in cls.BYPASS_IVS:
-            parsed_final = config
-        else:
-            target_data = config.get('configData')
-            if not target_data or not (aaa_result := cls._decrypt_xor_layer(target_data, target_salt)):
+            if matched_iv in cls.BYPASS_IVS:
                 parsed_final = config
             else:
-                try:
-                    raw_payload = base64.b64decode(aaa_result)
-                    if len(raw_payload) <= 50:
-                        parsed_final = config
-                    else:
-                        argon_key = hash_secret_raw(
-                            secret=cls._generate_master_key(config), 
-                            salt=raw_payload[0x0a:0x1a], 
-                            time_cost=int.from_bytes(raw_payload[1:5], "little"),
-                            memory_cost=int.from_bytes(raw_payload[5:9], "little"), 
-                            parallelism=raw_payload[9],
-                            hash_len=32, 
-                            type=Type.ID
-                        )
-
-                        cipher3 = ChaCha20_Poly1305.new(key=argon_key, nonce=raw_payload[0x1a:0x32])
-                        cipher3.update(raw_payload[:0x1a]) # AAD
-                        decrypted_json_bytes = cipher3.decrypt_and_verify(raw_payload[0x32:-16], raw_payload[-16:])
-                        parsed_final = json.loads(decrypted_json_bytes.decode('utf-8', errors='ignore'))
-                except Exception:
+                target_data = config.get('configData')
+                if not target_data or not (aaa_result := cls._decrypt_xor_layer(target_data, target_salt)):
                     parsed_final = config
+                else:
+                    try:
+                        raw_payload = base64.b64decode(aaa_result)
+                        if len(raw_payload) <= 50:
+                            parsed_final = config
+                        else:
+                            argon_key = hash_secret_raw(
+                                secret=cls._generate_master_key(config), 
+                                salt=raw_payload[0x0a:0x1a], 
+                                time_cost=int.from_bytes(raw_payload[1:5], "little"),
+                                memory_cost=int.from_bytes(raw_payload[5:9], "little"), 
+                                parallelism=raw_payload[9],
+                                hash_len=32, 
+                                type=Type.ID
+                            )
 
-        cleaned_final_json = cls._decode_inner_fields(parsed_final, target_salt)
-        
-        for json_field in ("v2rRawJson", "overwriteServerData"):
-            if json_field in cleaned_final_json and isinstance(raw_str := cleaned_final_json[json_field], str):
-                try:
-                    if (start_idx := raw_str.find('{')) != -1 and (end_idx := raw_str.rfind('}')) != -1:
-                        parsed_obj = json.loads(raw_str[start_idx:end_idx+1], strict=False)
-                        cleaned_final_json[json_field] = json.loads(parsed_obj, strict=False) if isinstance(parsed_obj, str) else parsed_obj
-                except Exception as e:
-                    cleaned_final_json[f"{json_field}_PARSING_ERROR"] = str(e)
+                            cipher3 = ChaCha20_Poly1305.new(key=argon_key, nonce=raw_payload[0x1a:0x32])
+                            cipher3.update(raw_payload[:0x1a]) # AAD
+                            decrypted_json_bytes = cipher3.decrypt_and_verify(raw_payload[0x32:-16], raw_payload[-16:])
+                            parsed_final = json.loads(decrypted_json_bytes.decode('utf-8', errors='ignore'))
+                    except Exception:
+                        parsed_final = config
 
-        return (
-            f"DEPWISE HTTP INJECTOR SCRIPT\n"
-            f"{'='*30}\n\n"
-            f"{json.dumps(cleaned_final_json, indent=4, ensure_ascii=False)}\n\n"
-            f"{'='*30}\n"
-            f"code : @Dan3651"
-        )
+            cleaned_final_json = cls._decode_inner_fields(parsed_final, target_salt)
+            
+            for json_field in ("v2rRawJson", "overwriteServerData"):
+                if json_field in cleaned_final_json and isinstance(raw_str := cleaned_final_json[json_field], str):
+                    try:
+                        if (start_idx := raw_str.find('{')) != -1 and (end_idx := raw_str.rfind('}')) != -1:
+                            parsed_obj = json.loads(raw_str[start_idx:end_idx+1], strict=False)
+                            cleaned_final_json[json_field] = json.loads(parsed_obj, strict=False) if isinstance(parsed_obj, str) else parsed_obj
+                    except Exception as e:
+                        cleaned_final_json[f"{json_field}_PARSING_ERROR"] = str(e)
+
+            return (
+                f"DEPWISE HTTP INJECTOR SCRIPT\n"
+                f"{'='*30}\n\n"
+                f"{json.dumps(cleaned_final_json, indent=4, ensure_ascii=False)}\n\n"
+                f"{'='*30}\n"
+                f"code : @Dan3651"
+            )
         except Exception as e:
             return f"ERROR: Excepción procesando .ehi ({type(e).__name__}: {str(e)})"
 
