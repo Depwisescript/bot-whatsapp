@@ -233,3 +233,8 @@ src/
 scripts/
 └── decryption/           # Motores Python de criptografía y bridge.py
 ```
+
+### Configuración de Descargas (Anti-Bloqueo)
+El bot utiliza `yt-dlp` para descargar música y videos. Para evitar los bloqueos de Datacenter de YouTube (Errores 403 / Sign in), el bot está configurado para enrutar el tráfico de descarga a través de un proxy SOCKS5 ubicado en una VPS con IP de Perú.
+- **Proxy**: `socks5://38.250.116.74:1080`
+- **Servicio**: `dante-server`
