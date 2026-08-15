@@ -244,7 +244,8 @@ _Los admins están exentos de la moderación automática._`;
             try {
                 const response = await generateAIResponse(
                     prompt || "Explícame de qué trata o qué significa este mensaje citado de forma breve.",
-                    ctx.quotedMessageBody
+                    ctx.quotedMessageBody,
+                    { sock: ctx.sock, jid: ctx.groupJid, sender: ctx.senderJid }
                 );
 
                 await ctx.sock.sendMessage(ctx.groupJid, { text: response });
