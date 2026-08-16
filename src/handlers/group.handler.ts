@@ -19,11 +19,11 @@ function replaceVars(template: string, userJid: string, groupName: string, membe
  */
 export function setupGroupHandler(sock: WASocket): void {
     sock.ev.on('group.join-request', async (update) => {
-        const { id: groupJid, author, participant, action } = update;
+        const { id: groupJid, author, participant, action } = update as any;
         // In some Baileys versions, the user JID is in 'participant', in others in 'author'
         const targetJid = participant || author;
         
-        if (action === 'request' && targetJid) {
+        if (action === 'created' && targetJid) {
             const settings = getGroupSettings(groupJid);
             if (settings.auto_approve === 1) {
                 try {
