@@ -565,4 +565,37 @@ export function registerAdminCommands(): void {
             }
         },
     });
+    // ── !autoapprove ─────────────────────────────────────────────
+    registerCommand({
+        name: 'autoapprove',
+        description: 'Activar/desactivar la aprobación automática de solicitudes de ingreso',
+        usage: '!autoapprove on | !autoapprove off',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            const arg = ctx.args[0]?.toLowerCase();
+
+            if (!arg) {
+                const settings = getGroupSettings(ctx.groupJid);
+                const status = settings.auto_approve === 1 ? 'Activo 🟢' : 'Desactivado 🔴';
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `🚪 *Aprobación Automática:* ${status}\n\nUso:\n• !autoapprove on\n• !autoapprove off`,
+                });
+                return;
+            }
+
+            const { setAutoApprove } = await import('../services/db.service');
+
+            if (arg === 'on') {
+                setAutoApprove(ctx.groupJid, true);
+                addAuditLog(ctx.groupJid, 'AUTO_APPROVE_ON', ctx.senderJid);
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '🟢 *Aprobación Automática activada.*\nEl bot aceptará automáticamente a los usuarios que soliciten unirse.' });
+            } else if (arg === 'off') {
+                setAutoApprove(ctx.groupJid, false);
+                addAuditLog(ctx.groupJid, 'AUTO_APPROVE_OFF', ctx.senderJid);
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '🔴 *Aprobación Automática desactivada.*' });
+            } else {
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '⚠️ Uso incorrecto. Debe ser *on* u *off*.' });
+            }
+        },
+    });
 }

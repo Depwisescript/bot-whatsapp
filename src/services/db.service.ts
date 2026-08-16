@@ -46,6 +46,7 @@ db.exec(`
     slowmode_seconds INTEGER DEFAULT 0,
     anti_nsfw INTEGER DEFAULT 0,
     levels_enabled INTEGER DEFAULT 1,
+    auto_approve INTEGER DEFAULT 0,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -83,6 +84,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_audit_log ON audit_log(group_jid, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_reminders ON reminders(remind_at);
 `);
+
+try {
+    db.exec('ALTER TABLE group_settings ADD COLUMN auto_approve INTEGER DEFAULT 0');
+} catch (e) {
+    // Column already exists
+}
 
 // ── Prepared Statements ──────────────────────────────────────────
 
@@ -151,6 +158,10 @@ const stmtUpdateSlowmode = db.prepare(
 const stmtUpdateAntiNsfw = db.prepare(
     `INSERT INTO group_settings (group_jid, anti_nsfw) VALUES (?, ?)
      ON CONFLICT(group_jid) DO UPDATE SET anti_nsfw = ?, updated_at = CURRENT_TIMESTAMP`
+);
+const stmtUpdateAutoApprove = db.prepare(
+    `INSERT INTO group_settings (group_jid, auto_approve) VALUES (?, ?)
+     ON CONFLICT(group_jid) DO UPDATE SET auto_approve = ?, updated_at = CURRENT_TIMESTAMP`
 );
 
 // User Levels
@@ -271,11 +282,12 @@ export interface GroupSettings {
     slowmode_seconds: number;
     anti_nsfw: number;
     levels_enabled: number;
+    auto_approve: number;
 }
 
 export function getGroupSettings(groupJid: string): GroupSettings {
     const row = stmtGetGroupSettings.get(groupJid) as GroupSettings | undefined;
-    return row || { group_jid: groupJid, welcome_msg: null, bye_msg: null, slowmode_seconds: 0, anti_nsfw: 0, levels_enabled: 1 };
+    return row || { group_jid: groupJid, welcome_msg: null, bye_msg: null, slowmode_seconds: 0, anti_nsfw: 0, levels_enabled: 1, auto_approve: 0 };
 }
 
 export function setWelcomeMsg(groupJid: string, msg: string | null): void {
@@ -293,6 +305,11 @@ export function setSlowmode(groupJid: string, seconds: number): void {
 export function setAntiNsfw(groupJid: string, enabled: boolean): void {
     const val = enabled ? 1 : 0;
     stmtUpdateAntiNsfw.run(groupJid, val, val);
+}
+
+export function setAutoApprove(groupJid: string, enabled: boolean): void {
+    const val = enabled ? 1 : 0;
+    stmtUpdateAutoApprove.run(groupJid, val, val);
 }
 
 // ── User Levels ─────────────────────────────────────────────────

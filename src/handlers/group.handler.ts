@@ -18,6 +18,24 @@ function replaceVars(template: string, userJid: string, groupName: string, membe
  * Handle group participant updates (join/leave/promote/demote).
  */
 export function setupGroupHandler(sock: WASocket): void {
+    sock.ev.on('group.join-request', async (update) => {
+        const { id: groupJid, author, participant, action } = update;
+        // In some Baileys versions, the user JID is in 'participant', in others in 'author'
+        const targetJid = participant || author;
+        
+        if (action === 'request' && targetJid) {
+            const settings = getGroupSettings(groupJid);
+            if (settings.auto_approve === 1) {
+                try {
+                    await sock.groupRequestParticipantsUpdate(groupJid, [targetJid], 'approve');
+                    addAuditLog(groupJid, 'AUTO_APPROVE_JOIN', 'system', targetJid);
+                } catch (err) {
+                    console.error('Error auto-approving join request:', err);
+                }
+            }
+        }
+    });
+
     sock.ev.on('group-participants.update', async (update) => {
         const { id: groupJid, participants, action } = update;
 
