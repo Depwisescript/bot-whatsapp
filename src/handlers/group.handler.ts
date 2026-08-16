@@ -64,7 +64,7 @@ export function setupGroupHandler(sock: WASocket): void {
                             filesSection = '\n\n📥 *Descarga tu archivo o app:*\n' + categories.map(c => `• *!${c}*`).join('\n');
                         }
 
-                        welcomeText = `👋 ¡Bienvenido/a @${jid.split('@')[0]}!\n\n📜 Recuerda revisar las reglas del grupo con *!rules*\n\n🤖 *Cuentas IP Perú:*\n• Visita nuestro bot en Telegram *@Depwise_bot* para crear cuentas IP Perú y que tu servidor funcione.\n\n🛡️ *Moderador Automático:*\n• Si tienes un grupo y necesitas moderación, ¡puedes agregarme!\n\n⚠️ *Sistema de moderación activo:*\n• Al llegar a ${config.maxWarnings} infracciones/faltas → Expulsión automática.${filesSection}\n\n¡Disfruta tu estancia! 🎉`;
+                        welcomeText = `👋 ¡Bienvenido/a @${jid.split('@')[0]}!\n\n📜 Recuerda revisar las reglas del grupo con *!rules*\n\n🤖 *Cuentas IP Perú:*\n• Visita nuestro bot en Telegram *@Depwise_bot* para crear cuentas IP Perú y que tu servidor funcione.\n\n🛡️ *Moderador Automático:*\n• Si tienes un grupo y necesitas moderación, ¡puedes agregarme!\n\n🔓 *Desencriptador VPN:*\n• Responde a un archivo .ehi o envía un link con *!decrypt* para revelar su configuración.\n\n⚠️ *Sistema de moderación activo:*\n• Al llegar a ${config.maxWarnings} infracciones/faltas → Expulsión automática.${filesSection}\n\n¡Disfruta tu estancia! 🎉`;
                     }
 
                     await sock.sendMessage(groupJid, {

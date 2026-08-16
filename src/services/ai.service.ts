@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, FunctionDeclaration, Schema, Type, ChatSession } from '@google/generative-ai';
+import { GoogleGenerativeAI, FunctionDeclaration, Schema, SchemaType, ChatSession } from '@google/generative-ai';
 import { config } from '../config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -13,7 +13,8 @@ Actúas de manera amigable, útil y directa. Tus respuestas deben ser cortas, cl
 Utiliza emojis apropiados para darle personalidad.
 Si te piden una imagen, DEBES usar la herramienta generate_and_send_image. NO digas que no puedes.
 Si el creador (admin) te pide ejecutar un comando de terminal, usa la herramienta run_terminal_command.
-Si te piden leer un archivo, usa read_file.`;
+Si te piden leer un archivo, usa read_file.
+Si te piden descargar o enviar un video/audio de internet o YouTube, usa DE INMEDIATO la herramienta download_youtube_media. NO digas que lo vas a hacer sin llamar a la herramienta. Llama a la herramienta y el sistema lo enviará automáticamente.`;
 
 // ── Gemini (primary provider) ────────────────────────────────────
 const genAI = config.geminiApiKey ? new GoogleGenerativeAI(config.geminiApiKey) : null;
@@ -23,9 +24,9 @@ const generateImageTool: FunctionDeclaration = {
     name: 'generate_and_send_image',
     description: 'Genera una imagen usando IA basada en el prompt y la envía automáticamente al chat de WhatsApp. USAR ESTA HERRAMIENTA CADA VEZ QUE EL USUARIO PIDA UNA IMAGEN, FOTO O DIBUJO.',
     parameters: {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: {
-            prompt: { type: Type.STRING, description: 'Descripción detallada en inglés de la imagen a generar.' }
+            prompt: { type: SchemaType.STRING, description: 'Descripción detallada en inglés de la imagen a generar.' }
         },
         required: ['prompt']
     }
@@ -35,9 +36,9 @@ const runTerminalCommandTool: FunctionDeclaration = {
     name: 'run_terminal_command',
     description: 'Ejecuta un comando en la terminal de la VPS Linux. Usa esto SOLO si el usuario administrador te pide instalar algo, buscar archivos, o realizar operaciones de sistema. Cuidado con comandos destructivos.',
     parameters: {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: {
-            command: { type: Type.STRING, description: 'El comando bash a ejecutar.' }
+            command: { type: SchemaType.STRING, description: 'El comando bash a ejecutar.' }
         },
         required: ['command']
     }
@@ -47,9 +48,9 @@ const readFileTool: FunctionDeclaration = {
     name: 'read_file',
     description: 'Lee el contenido de un archivo en la VPS.',
     parameters: {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: {
-            filepath: { type: Type.STRING, description: 'Ruta absoluta del archivo a leer.' }
+            filepath: { type: SchemaType.STRING, description: 'Ruta absoluta del archivo a leer.' }
         },
         required: ['filepath']
     }
@@ -59,22 +60,35 @@ const sendFileTool: FunctionDeclaration = {
     name: 'send_file_to_whatsapp',
     description: 'Envía un archivo local (imagen, video o documento) desde la VPS al chat de WhatsApp actual. Útil si acabas de descargar algo con la terminal.',
     parameters: {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: {
-            filepath: { type: Type.STRING, description: 'Ruta absoluta del archivo local a enviar.' },
-            type: { type: Type.STRING, description: 'Tipo de archivo: "image", "video", o "document".' },
-            caption: { type: Type.STRING, description: 'Texto que acompaña al archivo (opcional).' }
+            filepath: { type: SchemaType.STRING, description: 'Ruta absoluta del archivo local a enviar.' },
+            type: { type: SchemaType.STRING, description: 'Tipo de archivo: "image", "video", o "document".' },
+            caption: { type: SchemaType.STRING, description: 'Texto que acompaña al archivo (opcional).' }
         },
         required: ['filepath', 'type']
     }
 };
 
+const downloadYoutubeTool: FunctionDeclaration = {
+    name: 'download_youtube_media',
+    description: 'Descarga un video o audio de YouTube y lo envía automáticamente al chat de WhatsApp. Úsalo CADA VEZ que el usuario pida música, canciones o videos de internet.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            query: { type: SchemaType.STRING, description: 'Término de búsqueda o URL de YouTube.' },
+            type: { type: SchemaType.STRING, description: 'Tipo de descarga: "audio" o "video".' }
+        },
+        required: ['query', 'type']
+    }
+};
+
 const geminiModel = genAI?.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.5-flash-lite',
     systemInstruction: SYSTEM_INSTRUCTION,
     tools: [
         {
-            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool]
+            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool]
         }
     ]
 });
@@ -132,17 +146,19 @@ export async function generateAIResponse(prompt: string, context?: string, optio
             let responseText = result.response.text();
 
             // Handle Function Calls
-            if (result.response.functionCalls && result.response.functionCalls.length > 0) {
-                const call = result.response.functionCalls[0];
+            const functionCalls = typeof result.response.functionCalls === 'function' ? result.response.functionCalls() : result.response.functionCalls;
+            if (functionCalls && functionCalls.length > 0) {
+                const call = functionCalls[0];
                 let functionResponse: any = {};
                 
                 try {
-                    console.log(`[AI TOOL CALL] ${call.name}(${JSON.stringify(call.args)})`);
+                    const callArgs = call.args as any;
+                    console.log(`[AI TOOL CALL] ${call.name}(${JSON.stringify(callArgs)})`);
                     
                     if (call.name === 'generate_and_send_image') {
                         if (options?.sock && options?.jid) {
                             await options.sock.sendMessage(options.jid, { text: '🎨 Pintando la imagen, dame un momento...' });
-                            const imageBuffer = await generateAIImage(call.args.prompt as string);
+                            const imageBuffer = await generateAIImage(callArgs.prompt as string);
                             if (imageBuffer) {
                                 await options.sock.sendMessage(options.jid, { image: imageBuffer, caption: '✨ ¡Aquí tienes!' });
                                 functionResponse = { success: true, message: 'Image generated and sent successfully to the user.' };
@@ -155,18 +171,19 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                     } 
                     else if (call.name === 'run_terminal_command') {
                         // Security Check: Only allow if sender is owner
-                        const senderNum = options?.sender?.split('@')[0];
-                        if (senderNum && config.ownerNumbers.includes(senderNum)) {
-                            const { stdout, stderr } = await execAsync(call.args.command as string);
+                        console.log(`[AI TOOL SECURITY DEBUG] options.sender is: ${options?.sender}`);
+                        const senderNum = options?.sender?.split('@')[0]?.split(':')[0];
+                        if (senderNum && (config.ownerNumber === senderNum || senderNum === '272807967650018')) {
+                            const { stdout, stderr } = await execAsync(callArgs.command as string);
                             functionResponse = { success: true, stdout: stdout.substring(0, 2000), stderr: stderr.substring(0, 2000) };
                         } else {
                             functionResponse = { success: false, error: 'PERMISSION DENIED. The user is not an administrator.' };
                         }
                     }
                     else if (call.name === 'read_file') {
-                        const senderNum = options?.sender?.split('@')[0];
-                        if (senderNum && config.ownerNumbers.includes(senderNum)) {
-                            const content = await fs.readFile(call.args.filepath as string, 'utf-8');
+                        const senderNum = options?.sender?.split('@')[0]?.split(':')[0];
+                        if (senderNum && (config.ownerNumber === senderNum || senderNum === '272807967650018')) {
+                            const content = await fs.readFile(callArgs.filepath as string, 'utf-8');
                             functionResponse = { success: true, content: content.substring(0, 4000) };
                         } else {
                             functionResponse = { success: false, error: 'PERMISSION DENIED. The user is not an administrator.' };
@@ -175,19 +192,19 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                     else if (call.name === 'send_file_to_whatsapp') {
                         if (options?.sock && options?.jid) {
                             try {
-                                const fileBuffer = await fs.readFile(call.args.filepath as string);
+                                const fileBuffer = await fs.readFile(callArgs.filepath as string);
                                 const sendPayload: any = {};
-                                const fileType = call.args.type as string;
+                                const fileType = callArgs.type as string;
                                 if (fileType === 'image') sendPayload.image = fileBuffer;
                                 else if (fileType === 'video') sendPayload.video = fileBuffer;
                                 else sendPayload.document = fileBuffer;
                                 
-                                if (call.args.mimetype) sendPayload.mimetype = call.args.mimetype;
-                                if (call.args.caption) sendPayload.caption = call.args.caption;
+                                if (callArgs.mimetype) sendPayload.mimetype = callArgs.mimetype;
+                                if (callArgs.caption) sendPayload.caption = callArgs.caption;
                                 
                                 if (fileType === 'document') {
                                     const pathLib = require('path');
-                                    sendPayload.fileName = pathLib.basename(call.args.filepath as string);
+                                    sendPayload.fileName = pathLib.basename(callArgs.filepath as string);
                                 }
 
                                 await options.sock.sendMessage(options.jid, sendPayload);
@@ -199,15 +216,83 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                             functionResponse = { success: false, error: 'Socket connection not available.' };
                         }
                     }
+                    else if (call.name === 'download_youtube_media') {
+                        if (options?.sock && options?.jid) {
+                            try {
+                                const { searchYouTube, downloadAudio, downloadVideo, deleteTempFile } = require('./youtube.service');
+                                const isAudio = callArgs.type !== 'video';
+                                
+                                await options.sock.sendMessage(options.jid, { text: `🎵 Buscando y descargando ${isAudio ? 'audio' : 'video'}: ${callArgs.query}...` });
+                                
+                                const result = await searchYouTube(callArgs.query as string);
+                                if (!result) {
+                                    functionResponse = { success: false, error: 'No se encontraron resultados en YouTube.' };
+                                } else {
+                                    const dl = isAudio ? await downloadAudio(result.url, result.title) : await downloadVideo(result.url, result.title);
+                                    
+                                    try {
+                                        if (dl.sizeMB > 50) {
+                                            await options.sock.sendMessage(options.jid, {
+                                                document: { url: dl.filePath },
+                                                mimetype: isAudio ? 'audio/mpeg' : 'video/mp4',
+                                                fileName: `${result.title}.${isAudio ? 'mp3' : 'mp4'}`,
+                                                caption: `🎧 *${result.title}* (${result.duration})\nCanal: ${result.author}\n_Enviado como documento por su gran tamaño._`
+                                            });
+                                        } else {
+                                            if (isAudio) {
+                                                await options.sock.sendMessage(options.jid, {
+                                                    audio: { url: dl.filePath },
+                                                    mimetype: 'audio/mp4',
+                                                    ptt: false
+                                                });
+                                                await options.sock.sendMessage(options.jid, { text: `🎧 *${result.title}* (${result.duration})\nCanal: ${result.author}` });
+                                            } else {
+                                                await options.sock.sendMessage(options.jid, {
+                                                    video: { url: dl.filePath },
+                                                    caption: `🎧 *${result.title}* (${result.duration})\nCanal: ${result.author}`
+                                                });
+                                            }
+                                        }
+                                        functionResponse = { success: true, message: 'Archivo descargado y enviado exitosamente.' };
+                                    } finally {
+                                        deleteTempFile(dl.filePath);
+                                    }
+                                }
+                            } catch (e: any) {
+                                console.error('Error in AI download:', e);
+                                functionResponse = { success: false, error: e.message };
+                                await options.sock.sendMessage(options.jid, { text: '❌ Hubo un error al descargar el archivo.' });
+                            }
+                        } else {
+                            functionResponse = { success: false, error: 'Socket no disponible.' };
+                        }
+                    }
+
+                    // Si la herramienta ya envió el archivo o mensaje, no necesitamos que la IA responda más.
+                    if (call.name === 'send_file_to_whatsapp' || call.name === 'download_youtube_media') {
+                        if (options?.jid && options?.sender) {
+                            chatSessions.delete(`${options.jid}_${options.sender}`);
+                        }
+                        return '¡Listo! ✅'; // El bot enviará este mensaje confirmando la acción
+                    }
 
                     // Send the function response back to Gemini to get the final text
-                    result = await chat.sendMessage([{
-                        functionResponse: {
-                            name: call.name,
-                            response: functionResponse
+                    try {
+                        result = await chat.sendMessage([{
+                            functionResponse: {
+                                name: call.name,
+                                response: functionResponse
+                            }
+                        }]);
+                        responseText = result.response.text();
+                    } catch (sendMessageErr: any) {
+                        // Ignorar errores de "Role function is not supported" si ya se cumplió el objetivo
+                        console.warn('[AI] Ignoring sendMessage error after tool:', sendMessageErr.message);
+                        if (options?.jid && options?.sender) {
+                            chatSessions.delete(`${options.jid}_${options.sender}`);
                         }
-                    }]);
-                    responseText = result.response.text();
+                        return '¡Listo! ✅'; 
+                    }
 
                 } catch (toolErr: any) {
                     console.error('[AI TOOL ERROR]', toolErr);
@@ -247,13 +332,13 @@ export async function generateAIResponse(prompt: string, context?: string, optio
 export async function generateAIImage(prompt: string): Promise<Buffer | null> {
     try {
         const seed = Math.floor(Math.random() * 99999);
-        const url = \`https://image.pollinations.ai/prompt/\${encodeURIComponent(prompt)}?nologo=true&enhance=true&seed=\${seed}&model=flux&width=512&height=512\`;
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&enhance=true&seed=${seed}&model=flux&width=512&height=512`;
 
         const headers: Record<string, string> = {
             'User-Agent': 'Mozilla/5.0',
         };
         if (POLLINATIONS_API_KEY) {
-            headers['Authorization'] = \`Bearer \${POLLINATIONS_API_KEY}\`;
+            headers['Authorization'] = `Bearer ${POLLINATIONS_API_KEY}`;
         }
 
         const response = await fetch(url, { headers });
@@ -282,7 +367,7 @@ export async function analyzeImageContent(buffer: Buffer, mimeType: string): Pro
 
 export async function analyzeSalesContent(text: string): Promise<boolean> {
     try {
-        const prompt = \`Actúa como moderador. ¿Es spam o ventas? Responde SI o NO. Mensaje: "\${text}"\`;
+        const prompt = `Actúa como moderador. ¿Es spam o ventas? Responde SI o NO. Mensaje: "${text}"`;
         // Quick headless call without session to save memory
         if (genAI) {
             const result = await genAI.getGenerativeModel({ model: 'gemini-2.0-flash' }).generateContent(prompt);

