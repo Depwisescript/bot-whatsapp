@@ -176,11 +176,14 @@ export function setupMessageHandler(sock: WASocket): void {
                     continue;
                 }
 
-                // Skip empty-body messages (images without caption, stickers, etc.)
-                // But still count stickers for anti-spam
                 const imageMsg = message.message?.imageMessage;
                 const stickerMsg = message.message?.stickerMessage;
+                const docMsg = message.message?.documentMessage;
+                const videoMsg = message.message?.videoMessage;
+                const audioMsg = message.message?.audioMessage;
+                
                 const hasSticker = !!stickerMsg;
+                const hasMedia = !!(imageMsg || docMsg || videoMsg || audioMsg || stickerMsg);
                 
                 // ── Anti-NSFW Vision Check (skip for admins and owner) ──
                 if (!isAdmin && !isOwner && (imageMsg || stickerMsg)) {
@@ -211,10 +214,12 @@ export function setupMessageHandler(sock: WASocket): void {
                     }
                 }
 
-                if (!body && !hasSticker) continue;
+                if (!body && !hasMedia) continue;
+
+                const modBody = body || docMsg?.fileName || '[MEDIA]';
 
                 // ── Slowmode check (non-admins only) ──
-                if (!isAdmin && !isOwner && body) {
+                if (!isAdmin && !isOwner) {
                     const settings = getGroupSettings(groupJid);
                     if (settings.slowmode_seconds > 0) {
                         const slowKey = `${groupJid}:${senderJid}`;
@@ -236,17 +241,17 @@ export function setupMessageHandler(sock: WASocket): void {
                     }
                 }
 
-                if (!body) continue;
-
                 // ── Auto-moderation (skip for admins and owner) ──
                 if (!isAdmin && !isOwner) {
-                    const moderationResult = await checkMessage(body, senderJid, groupJid);
+                    const moderationResult = await checkMessage(modBody, senderJid, groupJid);
 
                     if (moderationResult.violation) {
                         await handleViolation(sock, message, groupJid, senderJid, moderationResult);
                         continue; // Don't process as command
                     }
                 }
+
+                if (!body) continue;
 
                 // ── Auto AI: respond when bot is replied to or @mentioned ──
                 if (!body.startsWith(config.prefix)) {
