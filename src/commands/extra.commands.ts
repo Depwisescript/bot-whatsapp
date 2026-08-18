@@ -722,8 +722,8 @@ export function registerExtraCommands(): void {
 
             let decryptedText = result.output;
             
-            // Filtrar enlaces de WhatsApp y Telegram para evitar spam
-            decryptedText = decryptedText.replace(/https?:\/\/(chat\.whatsapp\.com|whatsapp\.com\/channel|wa\.me|t\.me|telegram\.me)\/[A-Za-z0-9_-]+/gi, '[LINK ELIMINADO]');
+            // Filtrar enlaces de WhatsApp, Telegram y Facebook para evitar spam
+            decryptedText = decryptedText.replace(/https?:\/\/(www\.)?(chat\.whatsapp\.com|whatsapp\.com|wa\.me|t\.me|telegram\.me|facebook\.com|fb\.com)\/[A-Za-z0-9_.\-\/]+/gi, '[LINK ELIMINADO]');
 
             const docName = docMsg ? (docMsg.fileName || 'archivo.config') : (targetToDecrypt.startsWith('darktunnel://') ? 'DarkTunnel Link' : 'SSC Link');
 
