@@ -123,6 +123,7 @@ export function startPanel(): void {
     app.get('/api/dashboard/stats', authMiddleware, (_req, res) => {
         res.json({
             status: globalStatus,
+            qr: globalQR,
             uptime: Math.floor((Date.now() - config.startTime) / 1000),
             memory: Math.round(process.memoryUsage().rss / 1024 / 1024)
         });
