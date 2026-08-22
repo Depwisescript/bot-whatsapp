@@ -187,7 +187,7 @@ export function startPanel(): void {
     });
 
     app.get('/api/dashboard/settings', authMiddleware, (req, res) => {
-        const envPath = require('path').resolve(__dirname, '../../../.env');
+        const envPath = require('path').resolve(__dirname, '../../.env');
         try {
             const content = require('fs').readFileSync(envPath, 'utf8');
             res.json({ env: content });
@@ -199,7 +199,7 @@ export function startPanel(): void {
     app.post('/api/dashboard/settings', authMiddleware, (req, res) => {
         const { envContent } = req.body;
         if (!envContent) { res.status(400).json({ error: 'No content' }); return; }
-        const envPath = require('path').resolve(__dirname, '../../../.env');
+        const envPath = require('path').resolve(__dirname, '../../.env');
         try {
             require('fs').writeFileSync(envPath, envContent, 'utf8');
             res.json({ success: true });
