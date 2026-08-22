@@ -8,7 +8,7 @@ import {
     deleteSharedFileById,
     getFilesDir,
 } from '../services/file.service';
-import { globalQR, globalStatus } from '../connection';
+import { globalQR, globalStatus, globalSock } from '../connection';
 
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
