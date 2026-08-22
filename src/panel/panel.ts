@@ -8,6 +8,8 @@ import {
     deleteSharedFileById,
     getFilesDir,
 } from '../services/file.service';
+import { globalQR, globalStatus } from '../connection';
+
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
 
@@ -98,6 +100,14 @@ export function startPanel(): void {
         } else {
             res.status(404).json({ error: 'Archivo no encontrado' });
         }
+    });
+
+    // ── Bot Status ───────────────────────────────────────────────
+    app.get('/api/status', authMiddleware, (_req: express.Request, res: express.Response) => {
+        res.json({
+            status: globalStatus,
+            qr: globalQR
+        });
     });
 
     // ── Health Check ─────────────────────────────────────────────

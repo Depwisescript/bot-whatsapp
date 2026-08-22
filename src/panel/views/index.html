@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📁 Panel de Archivos — WhatsApp Bot</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -407,6 +408,15 @@
         </div>
 
         <div class="container">
+            <!-- Bot Status Card -->
+            <div class="upload-card" id="bot-status-card" style="text-align: center;">
+                <h2>🤖 Estado del Bot</h2>
+                <div id="bot-status-content">
+                    <div class="spinner" style="border-color: var(--accent); border-top-color: transparent;"></div> Cargando estado...
+                </div>
+                <canvas id="qr-canvas" style="display: none; margin: 16px auto; border-radius: 8px; border: 4px solid white;"></canvas>
+            </div>
+
             <!-- Upload Card -->
             <div class="upload-card">
                 <h2>⬆️ Subir Archivo</h2>
@@ -482,19 +492,7 @@
             }
         });
 
-        function showDashboard() {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-        }
 
-        function logout() {
-            authToken = '';
-            localStorage.removeItem('panel_token');
-            document.getElementById('login-screen').style.display = 'flex';
-            document.getElementById('dashboard').style.display = 'none';
-        }
-
-        // ── Drag & Drop ──────────────────────────────────────────
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
 
@@ -671,12 +669,56 @@
             }
         }
 
+        // ── Bot Status Polling ───────────────────────────────────
+        let statusInterval;
+        async function pollStatus() {
+            if (!authToken) return;
+            try {
+                const res = await fetch('/api/status', { headers: { 'X-Auth-Token': authToken }});
+                if (res.status === 401) return;
+                const data = await res.json();
+                
+                const content = document.getElementById('bot-status-content');
+                const canvas = document.getElementById('qr-canvas');
+
+                if (data.status === 'connected') {
+                    content.innerHTML = '<div style="color: var(--success); font-size: 18px; font-weight: bold;">✅ Conectado y Operativo</div>';
+                    canvas.style.display = 'none';
+                } else if (data.status === 'qr' && data.qr) {
+                    content.innerHTML = '<div style="color: var(--text-secondary); margin-bottom: 10px;">Escanea el código QR para conectar:</div>';
+                    canvas.style.display = 'block';
+                    QRCode.toCanvas(canvas, data.qr, function (error) {
+                        if (error) console.error(error);
+                    });
+                } else {
+                    content.innerHTML = '<div style="color: var(--accent);"><span class="spinner" style="border-color: var(--accent); border-top-color: transparent;"></span> Conectando al servicio...</div>';
+                    canvas.style.display = 'none';
+                }
+            } catch (err) {}
+        }
+
         // ── Toast ────────────────────────────────────────────────
         function showToast(msg, type = 'success') {
             const el = document.getElementById('toast');
             el.textContent = msg;
             el.className = `toast toast-${type} show`;
             setTimeout(() => el.classList.remove('show'), 3000);
+        }
+
+        // Start polling when dashboard is active
+        function showDashboard() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            pollStatus();
+            if(!statusInterval) statusInterval = setInterval(pollStatus, 3000);
+        }
+
+        function logout() {
+            authToken = '';
+            localStorage.removeItem('panel_token');
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+            if(statusInterval) { clearInterval(statusInterval); statusInterval = null; }
         }
     </script>
 </body>

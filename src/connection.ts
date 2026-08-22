@@ -48,6 +48,9 @@ function startReminderWorker(sock: any) {
     }, 60_000); // Check every minute
 }
 
+export let globalQR = '';
+export let globalStatus = 'connecting'; // 'connecting', 'qr', 'connected', 'disconnected'
+
 export async function startBot(): Promise<void> {
     const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
     const { version } = await fetchLatestBaileysVersion();
@@ -71,24 +74,34 @@ export async function startBot(): Promise<void> {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
+            globalQR = qr;
+            globalStatus = 'qr';
             console.log('\n📱 Escanea el código QR con tu teléfono WhatsApp:\n');
             qrcode.generate(qr, { small: true });
         }
 
         if (connection === 'close') {
+            globalStatus = 'disconnected';
+            globalQR = '';
             const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
 
             if (statusCode === DisconnectReason.loggedOut) {
-                console.log('❌ Sesión cerrada. Elimina la carpeta auth_info/ y escanea el QR nuevamente.');
-                process.exit(1);
+                console.log('❌ Sesión cerrada. Limpiando credenciales para generar nuevo QR...');
+                try {
+                    const fs = require('fs');
+                    fs.rmSync(config.authDir, { recursive: true, force: true });
+                } catch (e) {}
+                setTimeout(startBot, 2000);
+            } else {
+                // Reconnect on any other disconnect reason
+                console.log(`⚡ Reconectando... (razón: ${statusCode || 'desconocida'})`);
+                setTimeout(startBot, 3000);
             }
-
-            // Reconnect on any other disconnect reason
-            console.log(`⚡ Reconectando... (razón: ${statusCode || 'desconocida'})`);
-            setTimeout(startBot, 3000);
         }
 
         if (connection === 'open') {
+            globalQR = '';
+            globalStatus = 'connected';
             console.log('');
             console.log('╔══════════════════════════════════════╗');
             console.log('║  ✅ Bot conectado exitosamente       ║');
@@ -96,14 +109,6 @@ export async function startBot(): Promise<void> {
             console.log('║  🛡️  Auto-moderación activa          ║');
             console.log('╚══════════════════════════════════════╝');
             console.log('');
-
-            // Start the panel on first successful connection
-            if (!panelStarted) {
-                panelStarted = true;
-                try { startPanel(); } catch (err) {
-                    console.error('Error starting panel:', err);
-                }
-            }
         }
     });
 
