@@ -63,4 +63,7 @@ export const config = {
 
     /** Panel admin password */
     panelPass: process.env.PANEL_PASS || '',
+
+    /** Proxy SOCKS5 para yt-dlp */
+    youtubeProxy: process.env.YOUTUBE_PROXY || 'socks5://38.250.116.74:1080',
 };
