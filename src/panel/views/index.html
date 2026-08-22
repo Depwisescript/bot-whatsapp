@@ -420,6 +420,7 @@
                 <button class="active" onclick="switchTab('tab-status')">🤖 Estado</button>
                 <button onclick="switchTab('tab-broadcast')">📢 Difusión</button>
                 <button onclick="switchTab('tab-spam')">🚨 Infracciones</button>
+                <button onclick="switchTab('tab-settings')">⚙️ Configuración</button>
                 <button onclick="switchTab('tab-files')">📁 Archivos</button>
             </div>
             <!-- Bot Status Card -->
@@ -430,6 +431,10 @@
                     <div class="spinner" style="border-color: var(--accent); border-top-color: transparent;"></div> Cargando estado...
                 </div>
                 <canvas id="qr-canvas" style="display: none; margin: 16px auto; border-radius: 8px; border: 4px solid white;"></canvas>
+
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-danger" onclick="disconnectWhatsApp()" id="btn-disconnect">🔴 Desvincular Número (Generar nuevo QR)</button>
+                </div>
             </div>
 
             
@@ -457,7 +462,21 @@
                 </div>
             </div>
 
+            
+            <!-- Tab Settings -->
+            <div id="tab-settings" class="tab-content">
+                <div class="upload-card">
+                    <h2>⚙️ Configuración (.env)</h2>
+                    <p style="color:var(--text-secondary); margin-bottom: 16px;">Edita las credenciales, apis, y configuración principal. El bot se reiniciará automáticamente al guardar.</p>
+                    <div class="form-group">
+                        <textarea id="env-editor" rows="18" style="width:100%; background:var(--bg-input); border:1px solid var(--border); border-radius:10px; color:#fff; padding:12px; font-family: monospace; white-space: pre;"></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveSettings()" id="btn-save-settings">💾 Guardar y Reiniciar</button>
+                </div>
+            </div>
+
             <!-- Tab Files -->
+
             <div id="tab-files" class="tab-content">
 <!-- Upload Card -->
             <div class="upload-card">
@@ -720,6 +739,7 @@
             event.currentTarget.classList.add('active');
             
             if(tabId === 'tab-spam') loadWarnings();
+            if(tabId === 'tab-settings') loadSettings();
         }
 
         async function sendBroadcast() {
@@ -770,6 +790,44 @@
             });
             showToast('Advertencias borradas', 'success');
             loadWarnings();
+        }
+
+        
+        async function disconnectWhatsApp() {
+            if(!confirm('¿Estás seguro que quieres desvincular el bot? Deberás escanear un nuevo código QR para reconectarlo.')) return;
+            const btn = document.getElementById('btn-disconnect');
+            btn.innerHTML = 'Desvinculando...'; btn.disabled = true;
+            try {
+                await fetch('/api/dashboard/disconnect', { method: 'POST', headers: { 'X-Auth-Token': authToken } });
+                showToast('Desvinculado. El panel se actualizará pronto.', 'success');
+            } catch(e) {}
+            btn.innerHTML = '🔴 Desvincular Número'; btn.disabled = false;
+        }
+
+        async function loadSettings() {
+            const res = await fetch('/api/dashboard/settings', { headers: { 'X-Auth-Token': authToken }});
+            const data = await res.json();
+            if(data.env) {
+                document.getElementById('env-editor').value = data.env;
+            }
+        }
+
+        async function saveSettings() {
+            const content = document.getElementById('env-editor').value;
+            if(!content) return;
+            const btn = document.getElementById('btn-save-settings');
+            btn.innerHTML = 'Guardando...'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/dashboard/settings', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth-Token': authToken },
+                    body: JSON.stringify({ envContent: content })
+                });
+                if(res.ok) {
+                    showToast('Guardado con éxito. Reiniciando bot...', 'success');
+                    setTimeout(() => window.location.reload(), 3000);
+                } else showToast('Error al guardar', 'error');
+            } catch(e) { showToast('Error', 'error'); }
+            btn.innerHTML = '💾 Guardar y Reiniciar'; btn.disabled = false;
         }
 
         // ── Bot Status Polling ───────────────────────────────────
