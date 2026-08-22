@@ -521,8 +521,266 @@
                     body: JSON.stringify({ user, pass }),
                 });
 
-                
                 const data = await res.json();
+                if (res.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('panel_token', authToken);
+                    showDashboard();
+                    loadFiles();
+                } else {
+                    showToast(data.error || 'Error de login', 'error');
+                }
+            } catch (err) {
+                showToast('Error de conexión', 'error');
+            }
+        });
+
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileName();
+            }
+        });
+
+        fileInput.addEventListener('change', updateFileName);
+
+        function updateFileName() {
+            const name = fileInput.files[0]?.name;
+            const el = document.getElementById('selected-file-name');
+            if (name) {
+                el.textContent = `📄 ${name}`;
+                // Auto-fill the name input if empty
+                const nameInput = document.getElementById('file-name');
+                if (!nameInput.value) {
+                    nameInput.value = name.split('.')[0].replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+                }
+            } else {
+                el.textContent = '';
+            }
+        }
+
+        // ── Upload ───────────────────────────────────────────────
+        async function uploadFile() {
+            const file = fileInput.files[0];
+            if (!file) {
+                showToast('Selecciona un archivo primero', 'error');
+                return;
+            }
+
+            const name = document.getElementById('file-name').value;
+            if (!name) {
+                showToast('Escribe un nombre para el archivo', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('upload-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Subiendo...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('name', name);
+            formData.append('group_jid', document.getElementById('file-group').value || 'global');
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'X-Auth-Token': authToken },
+                    body: formData,
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`✅ Archivo "${name}" subido exitosamente`, 'success');
+                    fileInput.value = '';
+                    document.getElementById('selected-file-name').textContent = '';
+                    document.getElementById('file-name').value = '';
+                    loadFiles();
+                } else {
+                    if (res.status === 401) { logout(); return; }
+                    showToast(data.error || 'Error al subir', 'error');
+                }
+            } catch (err) {
+                showToast('Error de conexión', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '⬆️ Subir Archivo';
+            }
+        }
+
+        // ── Load Files ───────────────────────────────────────────
+        async function loadFiles() {
+            try {
+                const res = await fetch('/api/files', {
+                    headers: { 'X-Auth-Token': authToken },
+                });
+
+                if (res.status === 401) { logout(); return; }
+                const data = await res.json();
+                renderFiles(data.files || []);
+            } catch {
+                document.getElementById('files-container').innerHTML =
+                    '<div class="empty-state"><div class="icon">❌</div><div>Error al cargar archivos</div></div>';
+            }
+        }
+
+        function renderFiles(files) {
+            const container = document.getElementById('files-container');
+
+            if (files.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><div>No hay archivos compartidos</div></div>';
+                return;
+            }
+
+            let html = `<table class="files-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Archivo</th>
+                        <th>Tamaño</th>
+                        <th>Grupo</th>
+                        <th>Fecha</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            for (const f of files) {
+                const size = f.size > 1024 * 1024
+                    ? (f.size / (1024 * 1024)).toFixed(1) + ' MB'
+                    : Math.round(f.size / 1024) + ' KB';
+
+                const groupLabel = f.group_jid === 'global'
+                    ? '<span class="badge badge-global">Global</span>'
+                    : '<span class="badge badge-group">Grupo</span>';
+
+                const date = new Date(f.created_at).toLocaleDateString('es', {
+                    day: '2-digit', month: 'short', year: 'numeric'
+                });
+
+                html += `<tr>
+                    <td class="file-name-cell">!archivo ${f.name}</td>
+                    <td>${f.original_name}</td>
+                    <td>${size}</td>
+                    <td>${groupLabel}</td>
+                    <td style="color:var(--text-secondary)">${date}</td>
+                    <td><button class="btn btn-danger" onclick="deleteFile(${f.id})">🗑️ Eliminar</button></td>
+                </tr>`;
+            }
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // ── Delete ───────────────────────────────────────────────
+        async function deleteFile(id) {
+            if (!confirm('¿Seguro que quieres eliminar este archivo?')) return;
+
+            try {
+                const res = await fetch(`/api/files/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Auth-Token': authToken },
+                });
+
+                if (res.status === 401) { logout(); return; }
+                if (res.ok) {
+                    showToast('🗑️ Archivo eliminado', 'success');
+                    loadFiles();
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Error al eliminar', 'error');
+                }
+            } catch {
+                showToast('Error de conexión', 'error');
+            }
+        }
+
+        
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tabs-nav button').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            
+            if(tabId === 'tab-spam') loadWarnings();
+        }
+
+        async function sendBroadcast() {
+            const msg = document.getElementById('broadcast-msg').value;
+            if(!msg) return showToast('Escribe un mensaje', 'error');
+            const btn = document.getElementById('btn-broadcast');
+            btn.innerHTML = 'Enviando...'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/dashboard/broadcast', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth-Token': authToken },
+                    body: JSON.stringify({ message: msg })
+                });
+                const data = await res.json();
+                if(res.ok) {
+                    showToast('Mensaje enviado a ' + data.count + ' grupos', 'success');
+                    document.getElementById('broadcast-msg').value = '';
+                } else showToast(data.error || 'Error', 'error');
+            } catch(e) { showToast('Error', 'error'); }
+            btn.innerHTML = '🚀 Enviar Broadcast'; btn.disabled = false;
+        }
+
+        async function loadWarnings() {
+            const res = await fetch('/api/dashboard/warnings', { headers: { 'X-Auth-Token': authToken }});
+            const data = await res.json();
+            const container = document.getElementById('spam-container');
+            if(!data.warnings || data.warnings.length === 0) {
+                container.innerHTML = '<div class="empty-state">✅ No hay infracciones recientes.</div>';
+                return;
+            }
+            let h = '<table class="files-table"><thead><tr><th>Grupo</th><th>Usuario</th><th>Advertencias</th><th>Acción</th></tr></thead><tbody>';
+            data.warnings.forEach(w => {
+                const userNum = w.user_jid.split('@')[0];
+                h += `<tr>
+                    <td style="font-size:12px; color:gray;">${w.group_jid.split('@')[0]}</td>
+                    <td class="file-name-cell">+${userNum}</td>
+                    <td>${w.count}</td>
+                    <td><button class="btn btn-danger" onclick="clearWarning('${w.group_jid}', '${w.user_jid}')">Perdonar</button></td>
+                </tr>`;
+            });
+            h += '</tbody></table>';
+            container.innerHTML = h;
+        }
+
+        async function clearWarning(groupJid, userJid) {
+            await fetch('/api/dashboard/clear-warnings', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth-Token': authToken },
+                body: JSON.stringify({ group_jid: groupJid, user_jid: userJid })
+            });
+            showToast('Advertencias borradas', 'success');
+            loadWarnings();
+        }
+
+        // ── Bot Status Polling ───────────────────────────────────
+        let statusInterval;
+        async function pollStatus() {
+            if (!authToken) return;
+            try {
+                const res = await fetch('/api/dashboard/stats', { headers: { 'X-Auth-Token': authToken }});
+                if (res.status === 401) return;
+                const data = await res.json();
+                
                 const content = document.getElementById('bot-status-content');
                 const canvas = document.getElementById('qr-canvas');
 
@@ -536,7 +794,6 @@
                 if (data.status === 'connected') {
                     content.innerHTML = '<div style="color: var(--success); font-size: 18px; font-weight: bold;">✅ Conectado y Operativo</div>' + statsHtml;
                     canvas.style.display = 'none';
-
                 } else if (data.status === 'qr' && data.qr) {
                     content.innerHTML = '<div style="color: var(--text-secondary); margin-bottom: 10px;">Escanea el código QR para conectar:</div>';
                     canvas.style.display = 'block';
