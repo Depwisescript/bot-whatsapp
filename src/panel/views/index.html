@@ -378,6 +378,13 @@
             .container { padding: 20px 16px; }
             .files-table th, .files-table td { padding: 12px 16px; }
         }
+    
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tabs-nav { display: flex; gap: 10px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 10px; }
+        .tabs-nav button { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); padding: 10px 20px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+        .tabs-nav button.active { background: var(--accent-gradient); color: #fff; border: none; }
+
     </style>
 </head>
 <body>
@@ -408,8 +415,16 @@
         </div>
 
         <div class="container">
+
+            <div class="tabs-nav">
+                <button class="active" onclick="switchTab('tab-status')">🤖 Estado</button>
+                <button onclick="switchTab('tab-broadcast')">📢 Difusión</button>
+                <button onclick="switchTab('tab-spam')">🚨 Infracciones</button>
+                <button onclick="switchTab('tab-files')">📁 Archivos</button>
+            </div>
             <!-- Bot Status Card -->
-            <div class="upload-card" id="bot-status-card" style="text-align: center;">
+            <div id="tab-status" class="tab-content active">
+<div class="upload-card" id="bot-status-card" style="text-align: center;">
                 <h2>🤖 Estado del Bot</h2>
                 <div id="bot-status-content">
                     <div class="spinner" style="border-color: var(--accent); border-top-color: transparent;"></div> Cargando estado...
@@ -417,7 +432,34 @@
                 <canvas id="qr-canvas" style="display: none; margin: 16px auto; border-radius: 8px; border: 4px solid white;"></canvas>
             </div>
 
-            <!-- Upload Card -->
+            
+            </div> <!-- End tab-status -->
+
+            <!-- Tab Broadcast -->
+            <div id="tab-broadcast" class="tab-content">
+                <div class="upload-card">
+                    <h2>📢 Enviar Mensaje a Todos los Grupos</h2>
+                    <div class="form-group">
+                        <label>Mensaje (Soporta negritas con *texto*)</label>
+                        <textarea id="broadcast-msg" rows="4" style="width:100%; background:var(--bg-input); border:1px solid var(--border); border-radius:10px; color:#fff; padding:12px; font-family:inherit;"></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="sendBroadcast()" id="btn-broadcast">🚀 Enviar Broadcast</button>
+                </div>
+            </div>
+
+            <!-- Tab Spam -->
+            <div id="tab-spam" class="tab-content">
+                <div class="files-card">
+                    <h2>🚨 Usuarios con Advertencias</h2>
+                    <div id="spam-container">
+                        <div class="empty-state"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Files -->
+            <div id="tab-files" class="tab-content">
+<!-- Upload Card -->
             <div class="upload-card">
                 <h2>⬆️ Subir Archivo</h2>
                 <div class="drop-zone" id="drop-zone">
@@ -451,7 +493,8 @@
                     </div>
                 </div>
             </div>
-        </div>
+                    </div> <!-- End tab-files -->
+</div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -478,212 +521,22 @@
                     body: JSON.stringify({ user, pass }),
                 });
 
-                const data = await res.json();
-                if (res.ok) {
-                    authToken = data.token;
-                    localStorage.setItem('panel_token', authToken);
-                    showDashboard();
-                    loadFiles();
-                } else {
-                    showToast(data.error || 'Error de login', 'error');
-                }
-            } catch (err) {
-                showToast('Error de conexión', 'error');
-            }
-        });
-
-
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-
-        dropZone.addEventListener('click', () => fileInput.click());
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                updateFileName();
-            }
-        });
-
-        fileInput.addEventListener('change', updateFileName);
-
-        function updateFileName() {
-            const name = fileInput.files[0]?.name;
-            const el = document.getElementById('selected-file-name');
-            if (name) {
-                el.textContent = `📄 ${name}`;
-                // Auto-fill the name input if empty
-                const nameInput = document.getElementById('file-name');
-                if (!nameInput.value) {
-                    nameInput.value = name.split('.')[0].replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
-                }
-            } else {
-                el.textContent = '';
-            }
-        }
-
-        // ── Upload ───────────────────────────────────────────────
-        async function uploadFile() {
-            const file = fileInput.files[0];
-            if (!file) {
-                showToast('Selecciona un archivo primero', 'error');
-                return;
-            }
-
-            const name = document.getElementById('file-name').value;
-            if (!name) {
-                showToast('Escribe un nombre para el archivo', 'error');
-                return;
-            }
-
-            const btn = document.getElementById('upload-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Subiendo...';
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('name', name);
-            formData.append('group_jid', document.getElementById('file-group').value || 'global');
-
-            try {
-                const res = await fetch('/api/upload', {
-                    method: 'POST',
-                    headers: { 'X-Auth-Token': authToken },
-                    body: formData,
-                });
-
-                const data = await res.json();
-                if (res.ok) {
-                    showToast(`✅ Archivo "${name}" subido exitosamente`, 'success');
-                    fileInput.value = '';
-                    document.getElementById('selected-file-name').textContent = '';
-                    document.getElementById('file-name').value = '';
-                    loadFiles();
-                } else {
-                    if (res.status === 401) { logout(); return; }
-                    showToast(data.error || 'Error al subir', 'error');
-                }
-            } catch (err) {
-                showToast('Error de conexión', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '⬆️ Subir Archivo';
-            }
-        }
-
-        // ── Load Files ───────────────────────────────────────────
-        async function loadFiles() {
-            try {
-                const res = await fetch('/api/files', {
-                    headers: { 'X-Auth-Token': authToken },
-                });
-
-                if (res.status === 401) { logout(); return; }
-                const data = await res.json();
-                renderFiles(data.files || []);
-            } catch {
-                document.getElementById('files-container').innerHTML =
-                    '<div class="empty-state"><div class="icon">❌</div><div>Error al cargar archivos</div></div>';
-            }
-        }
-
-        function renderFiles(files) {
-            const container = document.getElementById('files-container');
-
-            if (files.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><div>No hay archivos compartidos</div></div>';
-                return;
-            }
-
-            let html = `<table class="files-table">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Archivo</th>
-                        <th>Tamaño</th>
-                        <th>Grupo</th>
-                        <th>Fecha</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-            for (const f of files) {
-                const size = f.size > 1024 * 1024
-                    ? (f.size / (1024 * 1024)).toFixed(1) + ' MB'
-                    : Math.round(f.size / 1024) + ' KB';
-
-                const groupLabel = f.group_jid === 'global'
-                    ? '<span class="badge badge-global">Global</span>'
-                    : '<span class="badge badge-group">Grupo</span>';
-
-                const date = new Date(f.created_at).toLocaleDateString('es', {
-                    day: '2-digit', month: 'short', year: 'numeric'
-                });
-
-                html += `<tr>
-                    <td class="file-name-cell">!archivo ${f.name}</td>
-                    <td>${f.original_name}</td>
-                    <td>${size}</td>
-                    <td>${groupLabel}</td>
-                    <td style="color:var(--text-secondary)">${date}</td>
-                    <td><button class="btn btn-danger" onclick="deleteFile(${f.id})">🗑️ Eliminar</button></td>
-                </tr>`;
-            }
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
-
-        // ── Delete ───────────────────────────────────────────────
-        async function deleteFile(id) {
-            if (!confirm('¿Seguro que quieres eliminar este archivo?')) return;
-
-            try {
-                const res = await fetch(`/api/files/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'X-Auth-Token': authToken },
-                });
-
-                if (res.status === 401) { logout(); return; }
-                if (res.ok) {
-                    showToast('🗑️ Archivo eliminado', 'success');
-                    loadFiles();
-                } else {
-                    const data = await res.json();
-                    showToast(data.error || 'Error al eliminar', 'error');
-                }
-            } catch {
-                showToast('Error de conexión', 'error');
-            }
-        }
-
-        // ── Bot Status Polling ───────────────────────────────────
-        let statusInterval;
-        async function pollStatus() {
-            if (!authToken) return;
-            try {
-                const res = await fetch('/api/status', { headers: { 'X-Auth-Token': authToken }});
-                if (res.status === 401) return;
-                const data = await res.json();
                 
+                const data = await res.json();
                 const content = document.getElementById('bot-status-content');
                 const canvas = document.getElementById('qr-canvas');
 
+                let statsHtml = '';
+                if(data.uptime) {
+                    const h = Math.floor(data.uptime / 3600);
+                    const m = Math.floor((data.uptime % 3600) / 60);
+                    statsHtml = `<div style="margin-top:16px; font-size:13px; color:var(--text-secondary);">⏱️ Uptime: ${h}h ${m}m &nbsp; | &nbsp; 🧠 RAM: ${data.memory} MB</div>`;
+                }
+
                 if (data.status === 'connected') {
-                    content.innerHTML = '<div style="color: var(--success); font-size: 18px; font-weight: bold;">✅ Conectado y Operativo</div>';
+                    content.innerHTML = '<div style="color: var(--success); font-size: 18px; font-weight: bold;">✅ Conectado y Operativo</div>' + statsHtml;
                     canvas.style.display = 'none';
+
                 } else if (data.status === 'qr' && data.qr) {
                     content.innerHTML = '<div style="color: var(--text-secondary); margin-bottom: 10px;">Escanea el código QR para conectar:</div>';
                     canvas.style.display = 'block';

@@ -106,6 +106,9 @@ const stmtGetWarnings = db.prepare(
 const stmtResetWarnings = db.prepare(
     'DELETE FROM warnings WHERE group_jid = ? AND user_jid = ?'
 );
+const stmtGetAllWarnings = db.prepare(
+    'SELECT group_jid, user_jid, COUNT(*) as count, MAX(created_at) as last_warning FROM warnings GROUP BY group_jid, user_jid ORDER BY count DESC'
+);
 
 // Bans
 const stmtAddBan = db.prepare(
@@ -225,6 +228,10 @@ export function getWarnings(groupJid: string, userJid: string): Array<{ id: numb
 
 export function resetWarnings(groupJid: string, userJid: string): void {
     stmtResetWarnings.run(groupJid, userJid);
+}
+
+export function getAllWarnings(): Array<{ group_jid: string; user_jid: string; count: number; last_warning: string }> {
+    return stmtGetAllWarnings.all() as any;
 }
 
 // Bans

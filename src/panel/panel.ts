@@ -119,6 +119,57 @@ export function startPanel(): void {
         });
     });
 
+    // ── Dashboard API ────────────────────────────────────────────
+    app.get('/api/dashboard/stats', authMiddleware, (_req, res) => {
+        res.json({
+            status: globalStatus,
+            uptime: Math.floor((Date.now() - config.startTime) / 1000),
+            memory: Math.round(process.memoryUsage().rss / 1024 / 1024)
+        });
+    });
+
+    app.get('/api/dashboard/groups', authMiddleware, async (_req, res) => {
+        if (!globalSock) { res.json({ groups: [] }); return; }
+        try {
+            const groups = await globalSock.groupFetchAllParticipating();
+            const groupList = Object.values(groups).map((g: any) => ({
+                id: g.id,
+                subject: g.subject,
+                participants: g.participants?.length || 0
+            }));
+            res.json({ groups: groupList });
+        } catch(e) { res.status(500).json({ error: 'Failed to fetch groups' }); }
+    });
+
+    app.get('/api/dashboard/warnings', authMiddleware, (_req, res) => {
+        res.json({ warnings: require('../services/db.service').getAllWarnings() });
+    });
+
+    app.post('/api/dashboard/broadcast', authMiddleware, async (req, res) => {
+        if (!globalSock) { res.status(400).json({ error: 'Bot not connected' }); return; }
+        const { message } = req.body;
+        if (!message) { res.status(400).json({ error: 'No message provided' }); return; }
+        try {
+            const groups = await globalSock.groupFetchAllParticipating();
+            let count = 0;
+            for (const jid in groups) {
+                await globalSock.sendMessage(jid, { text: message });
+                count++;
+            }
+            res.json({ success: true, count });
+        } catch(e) { res.status(500).json({ error: 'Broadcast failed' }); }
+    });
+
+    app.post('/api/dashboard/clear-warnings', authMiddleware, (req, res) => {
+        const { group_jid, user_jid } = req.body;
+        if(group_jid && user_jid) {
+            require('../services/db.service').resetWarnings(group_jid, user_jid);
+            res.json({ success: true });
+        } else {
+            res.status(400).json({ error: 'Missing JIDs' });
+        }
+    });
+
     // ── Serve the dashboard HTML ─────────────────────────────────
     app.get('/', (_req: express.Request, res: express.Response) => {
         res.sendFile(path.resolve(__dirname, 'views', 'index.html'));

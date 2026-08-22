@@ -50,6 +50,7 @@ function startReminderWorker(sock: any) {
 
 export let globalQR = '';
 export let globalStatus = 'connecting'; // 'connecting', 'qr', 'connected', 'disconnected'
+export let globalSock: any = null; // Exposed for panel interaction
 
 export async function startBot(): Promise<void> {
     const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
@@ -65,6 +66,8 @@ export async function startBot(): Promise<void> {
         generateHighQualityLinkPreview: false,
         markOnlineOnConnect: true,
     });
+    
+    globalSock = sock;
 
     // Persist credentials on update
     sock.ev.on('creds.update', saveCreds);
