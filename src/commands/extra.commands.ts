@@ -663,6 +663,8 @@ export function registerExtraCommands(): void {
                 console.error('Error in !video:', err);
                 if (err.message === 'FILE_TOO_LARGE') {
                     await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ El video es demasiado pesado (más de 100MB) para enviarlo por WhatsApp. Intenta con uno más corto.' });
+                } else if (err.message && (err.message.includes('demasiado largo') || err.message.includes('transmisiones en vivo'))) {
+                    await ctx.sock.sendMessage(ctx.groupJid, { text: `❌ ${err.message}` });
                 } else {
                     await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ Hubo un error al descargar el video. Quizá es demasiado pesado para procesarlo en el servidor.' });
                 }

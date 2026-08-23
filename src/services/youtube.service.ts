@@ -81,6 +81,10 @@ export async function searchYouTube(query: string): Promise<YouTubeSearchResult 
         if (first.seconds && first.seconds > 1200) {
             throw new Error('El video es demasiado largo (máximo 20 minutos). ¡Pobre VPS! 🐢');
         }
+        
+        if (first.seconds === 0 || first.type === 'live' || (first.duration && first.duration.timestamp === '0:00')) {
+            throw new Error('No puedo descargar transmisiones en vivo (Live Streams).');
+        }
 
         return {
             title: first.title,
@@ -90,7 +94,7 @@ export async function searchYouTube(query: string): Promise<YouTubeSearchResult 
         };
     } catch (err) {
         console.error('Error in searchYouTube:', err);
-        return null;
+        throw err;
     }
 }
 
