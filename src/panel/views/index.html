@@ -449,6 +449,15 @@
                         <button class="btn" style="background: #4b5563; color: white; padding: 10px 20px; border: none;" onclick="toggleOfflineBot()" id="btn-offline">🔌 Apagar Offline</button>
                         <button class="btn" style="background: var(--primary); color: white; padding: 10px 20px; border: none;" onclick="restartBot()" id="btn-restart">🔄 Reiniciar</button>
                     </div>
+
+                    <div style="margin-top: 25px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                        <h4 style="margin-top:0; margin-bottom: 10px; font-size: 14px; color: #a0aabf;">📊 Tráfico de Red AWS (Mensual)</h4>
+                        <div id="bandwidth-stats" style="display: flex; justify-content: space-around; font-size: 13px; font-weight: bold;">
+                            <div style="color: #10b981;">▼ Entrada: <span id="bw-rx">Calculando...</span></div>
+                            <div style="color: #ef4444;">▲ Salida: <span id="bw-tx">Calculando...</span></div>
+                            <div style="color: var(--primary);">Σ Total: <span id="bw-total">Calculando...</span></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

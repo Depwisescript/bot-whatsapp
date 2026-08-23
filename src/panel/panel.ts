@@ -141,6 +141,17 @@ export function startPanel(): void {
         } catch(e) { res.status(500).json({ error: 'Failed to fetch groups' }); }
     });
 
+    
+    app.get('/api/dashboard/bandwidth', authMiddleware, (_req, res) => {
+        try {
+            const { execSync } = require('child_process');
+            const output = execSync('vnstat --json').toString();
+            res.json(JSON.parse(output));
+        } catch (error) {
+            res.json({ error: 'No vnstat data' });
+        }
+    });
+
     app.get('/api/dashboard/warnings', authMiddleware, (_req, res) => {
         res.json({ warnings: require('../services/db.service').getAllWarnings(), contacts: require('../services/db.service').getAllContacts() });
     });
