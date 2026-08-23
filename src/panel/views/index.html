@@ -443,7 +443,11 @@
                 <canvas id="qr-canvas" style="display: none; margin: 16px auto; border-radius: 8px; border: 4px solid white;"></canvas>
 
                 <div style="margin-top: 20px;">
-                    <button class="btn btn-danger" onclick="disconnectWhatsApp()" id="btn-disconnect">🔴 Desvincular Número (Generar nuevo QR)</button>
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn-danger" style="padding: 10px 20px;" onclick="disconnectWhatsApp()" id="btn-disconnect">🔴 Desvincular</button>
+                        <button class="btn" style="background: #e6a23c; color: white; padding: 10px 20px; border: none;" onclick="togglePauseBot()" id="btn-pause">⏸️ Pausar Bot</button>
+                        <button class="btn" style="background: var(--primary); color: white; padding: 10px 20px; border: none;" onclick="restartBot()" id="btn-restart">🔄 Reiniciar</button>
+                    </div>
                 </div>
             </div>
 
