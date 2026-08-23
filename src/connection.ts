@@ -50,7 +50,9 @@ function startReminderWorker(sock: any) {
 
 export let globalQR = '';
 export let globalStatus = 'connecting'; // 'connecting', 'qr', 'connected', 'disconnected'
-export let globalSock: any = null; // Exposed for panel interaction
+export let globalSock: any = null;
+export let globalPaused = false;
+export function setPaused(v: boolean) { globalPaused = v; } // Exposed for panel interaction
 
 export async function startBot(): Promise<void> {
     const { state, saveCreds } = await useMultiFileAuthState(config.authDir);

@@ -105,7 +105,7 @@ export function startPanel(): void {
     // ── Bot Status ───────────────────────────────────────────────
     app.get('/api/status', authMiddleware, (_req: express.Request, res: express.Response) => {
         res.json({
-            status: globalStatus,
+            status: globalPaused ? 'paused' : globalStatus,
             qr: globalQR
         });
     });
@@ -122,7 +122,7 @@ export function startPanel(): void {
     // ── Dashboard API ────────────────────────────────────────────
     app.get('/api/dashboard/stats', authMiddleware, (_req, res) => {
         res.json({
-            status: globalStatus,
+            status: globalPaused ? 'paused' : globalStatus,
             qr: globalQR,
             uptime: Math.floor((Date.now() - config.startTime) / 1000),
             memory: Math.round(process.memoryUsage().rss / 1024 / 1024)
@@ -144,6 +144,17 @@ export function startPanel(): void {
 
     app.get('/api/dashboard/warnings', authMiddleware, (_req, res) => {
         res.json({ warnings: require('../services/db.service').getAllWarnings() });
+    });
+
+    
+    app.post('/api/dashboard/power/pause', authMiddleware, (_req, res) => {
+        setPaused(!globalPaused);
+        res.json({ paused: globalPaused });
+    });
+    
+    app.post('/api/dashboard/power/restart', authMiddleware, (_req, res) => {
+        res.json({ success: true });
+        setTimeout(() => process.exit(1), 1000);
     });
 
     app.post('/api/dashboard/broadcast', authMiddleware, async (req, res) => {

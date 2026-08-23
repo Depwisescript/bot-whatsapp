@@ -1085,6 +1085,29 @@
             document.getElementById('restore-file').value = '';
         }
 
+        
+        async function togglePauseBot() {
+            try {
+                const res = await fetch('/api/dashboard/power/pause', { method: 'POST', headers: { 'X-Auth-Token': authToken }});
+                const data = await res.json();
+                if(res.ok) {
+                    showToast(data.paused ? 'Bot pausado' : 'Bot reanudado', 'success');
+                    pollStatus();
+                }
+            } catch(e) {}
+        }
+        
+        async function restartBot() {
+            if(!confirm('¿Estás seguro de que deseas reiniciar todo el servicio? El panel también se desconectará por unos segundos.')) return;
+            try {
+                const res = await fetch('/api/dashboard/power/restart', { method: 'POST', headers: { 'X-Auth-Token': authToken }});
+                if(res.ok) {
+                    showToast('Reiniciando sistema...', 'success');
+                    setTimeout(() => window.location.reload(), 4000);
+                }
+            } catch(e) {}
+        }
+
         // ── Bot Status Polling ───────────────────────────────────
         let statusInterval;
         async function pollStatus() {
@@ -1106,7 +1129,12 @@
 
                 if (data.status === 'connected') {
                     content.innerHTML = '<div style="color: var(--success); font-size: 18px; font-weight: bold;">✅ Conectado y Operativo</div>' + statsHtml;
+                    document.getElementById('btn-pause').innerHTML = '⏸️ Pausar Bot';
                     canvas.style.display = 'none';
+                } else if (data.status === 'paused') {
+                    content.innerHTML = '<div style="color: #e6a23c; font-size: 18px; font-weight: bold;">⏸️ Bot Pausado (Ignorando mensajes)</div>' + statsHtml;
+                    canvas.style.display = 'none';
+                    document.getElementById('btn-pause').innerHTML = '▶️ Reanudar Bot';
                 } else if (data.status === 'qr' && data.qr) {
                     content.innerHTML = '<div style="color: var(--text-secondary); margin-bottom: 10px;">Escanea el código QR para conectar:</div>';
                     canvas.style.display = 'block';

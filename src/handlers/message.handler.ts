@@ -1,5 +1,6 @@
 import { WASocket, proto, GroupMetadata, downloadMediaMessage } from '@whiskeysockets/baileys';
 import { config } from '../config';
+import { globalPaused } from '../connection';
 import { getCommand, CommandContext } from '../commands/index';
 import { checkMessage, handleViolation } from './moderation.handler';
 import { isMuted, addUserXP, getGroupSettings, addAuditLog } from '../services/db.service';
