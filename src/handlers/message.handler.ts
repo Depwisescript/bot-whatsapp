@@ -122,6 +122,7 @@ const dmCooldownCache = new Set<string>();
  */
 export function setupMessageHandler(sock: WASocket): void {
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
+        if (globalPaused) return;
         if (type !== 'notify') return;
 
         for (const message of messages) {
