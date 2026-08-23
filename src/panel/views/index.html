@@ -892,12 +892,15 @@
                 const isLid = w.user_jid.includes('@lid');
                 const userNum = w.user_jid.split('@')[0];
                 const groupName = groupMap[w.group_jid] || w.group_jid.split('@')[0];
+                const contactName = data.contacts && data.contacts[w.user_jid] ? data.contacts[w.user_jid] : null;
                 
                 let userDisplay = '';
                 if (isLid) {
-                    userDisplay = `<span style="color: #e6a23c;">👻 Oculto por Privacidad</span><br><span style="font-size: 10px; color: gray;">LID: ${userNum}</span>`;
+                    let lidLabel = contactName ? `👤 ${contactName}` : '👻 Oculto por Privacidad';
+                    userDisplay = `<span style="color: #e6a23c; font-weight: bold;">${lidLabel}</span><br><span style="font-size: 10px; color: gray;">LID: ${userNum}</span>`;
                 } else {
-                    userDisplay = `<a href="https://wa.me/${userNum}" target="_blank" style="color:var(--primary); text-decoration:none;">+${userNum}</a>`;
+                    let normalLabel = contactName ? `${contactName} (+${userNum})` : `+${userNum}`;
+                    userDisplay = `<a href="https://wa.me/${userNum}" target="_blank" style="color:var(--primary); text-decoration:none; font-weight:bold;">${normalLabel}</a>`;
                 }
 
                 h += `<tr>

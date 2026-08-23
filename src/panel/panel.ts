@@ -142,7 +142,7 @@ export function startPanel(): void {
     });
 
     app.get('/api/dashboard/warnings', authMiddleware, (_req, res) => {
-        res.json({ warnings: require('../services/db.service').getAllWarnings() });
+        res.json({ warnings: require('../services/db.service').getAllWarnings(), contacts: require('../services/db.service').getAllContacts() });
     });
 
     

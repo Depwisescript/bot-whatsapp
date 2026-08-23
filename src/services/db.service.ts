@@ -70,6 +70,7 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS contacts (jid TEXT PRIMARY KEY, name TEXT);
   CREATE TABLE IF NOT EXISTS reminders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_jid TEXT NOT NULL,
@@ -420,4 +421,24 @@ export function deleteReminder(id: number): void {
 // ── Graceful shutdown ───────────────────────────────────────────
 export function closeDatabase(): void {
     db.close();
+}
+
+
+const stmtUpsertContact = db.prepare('INSERT OR REPLACE INTO contacts (jid, name) VALUES (?, ?)');
+const stmtGetContact = db.prepare('SELECT name FROM contacts WHERE jid = ?');
+const stmtGetAllContacts = db.prepare('SELECT jid, name FROM contacts');
+
+export function saveContactName(jid: string, name: string) {
+    if(!jid || !name) return;
+    try { stmtUpsertContact.run(jid, name); } catch(e) {}
+}
+export function getContactName(jid: string): string | null {
+    const res = stmtGetContact.get(jid) as any;
+    return res ? res.name : null;
+}
+export function getAllContacts(): Record<string, string> {
+    const rows = stmtGetAllContacts.all() as any[];
+    const map: Record<string, string> = {};
+    rows.forEach(r => { map[r.jid] = r.name; });
+    return map;
 }

@@ -3,7 +3,7 @@ import { config } from '../config';
 import { globalPaused } from '../connection';
 import { getCommand, CommandContext } from '../commands/index';
 import { checkMessage, handleViolation } from './moderation.handler';
-import { isMuted, addUserXP, getGroupSettings, addAuditLog } from '../services/db.service';
+import { isMuted, addUserXP, getGroupSettings, addAuditLog, saveContactName } from '../services/db.service';
 import { generateAIResponse, analyzeImageContent } from '../services/ai.service';
 
 // ── Rate limiting for commands ───────────────────────────────────
