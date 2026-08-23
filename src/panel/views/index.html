@@ -472,6 +472,35 @@
             </div>
 
             
+            
+            <!-- Tab Migration -->
+            <div id="tab-migration" class="tab-content">
+                <div class="upload-card">
+                    <h2>📦 Sistema de Respaldo y Migración</h2>
+                    <p style="color:var(--text-secondary); margin-bottom: 24px;">Exporta tu bot actual para moverlo a otra VPS, o sube un backup anterior para restaurarlo. Se guardarán credenciales, configuraciones, usuarios y tu sesión de WhatsApp activa.</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        
+                        <!-- Panel Exportar -->
+                        <div style="background: var(--bg-card); padding: 24px; border-radius: 12px; border: 1px solid var(--border); text-align: center;">
+                            <h3 style="margin-top:0; font-size: 18px; color: var(--success);">1. Exportar Datos</h3>
+                            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Descarga un archivo .tar.gz con toda tu información actual.</p>
+                            <button class="btn btn-primary" style="padding: 14px 30px; font-size: 15px; width: 100%; background: var(--success);" onclick="downloadBackup()" id="btn-backup-2">Descargar Backup Seguro</button>
+                        </div>
+
+                        <!-- Panel Importar -->
+                        <div style="background: var(--bg-card); padding: 24px; border-radius: 12px; border: 1px solid var(--border); text-align: center;">
+                            <h3 style="margin-top:0; font-size: 18px; color: var(--accent);">2. Restaurar Datos</h3>
+                            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Sube un archivo wa-bot-backup.tar.gz para sobreescribir este bot.</p>
+                            <input type="file" id="restore-file" accept=".gz,.tar" style="display: none;" onchange="handleRestoreSelect()">
+                            <button class="btn btn-danger" style="padding: 14px 30px; font-size: 15px; width: 100%; background: var(--accent); border: none;" onclick="document.getElementById('restore-file').click()" id="btn-restore-select">Subir Backup y Restaurar</button>
+                            <div id="restore-status" style="margin-top: 10px; font-size: 13px; color: var(--text-secondary);"></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
             <!-- Tab Settings -->
             <div id="tab-settings" class="tab-content">
                 <div class="upload-card">
@@ -530,7 +559,7 @@
                         <!-- Panel Web -->
                         <div style="background: var(--bg-card); padding: 16px; border-radius: 12px; border: 1px solid var(--border); grid-column: 1 / -1;">
                             <h3 style="margin-top:0; font-size: 16px; color: var(--accent);">🔒 Credenciales de este Panel</h3>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; ">
                                 <div class="form-group">
                                     <label>Usuario del Panel</label>
                                     <input type="text" id="cfg-paneluser">
@@ -543,10 +572,8 @@
                         </div>
                     </div>
 
-                    <div style="margin-top: 24px; text-align: center; display: flex; justify-content: center; gap: 15px;">
-                        <button class="btn btn-primary" style="padding: 14px 40px; font-size: 16px;" onclick="saveSettings()" id="btn-save-settings">💾 Guardar Configuración y Reiniciar</button>
-                        <button class="btn btn-danger" style="padding: 14px 20px; font-size: 16px; background-color: var(--accent); border: none;" onclick="downloadBackup()" id="btn-backup">📦 Descargar Backup (Migración)</button>
-                    </div>
+                    <div style="margin-top: 24px; text-align: center; display: flex; justify-content: center; ">
+                        <button class="btn btn-primary" style="padding: 14px 40px; font-size: 16px;" onclick="saveSettings()" id="btn-save-settings">💾 Guardar Configuración y Reiniciar</button>                    </div>
                 </div>
             </div>
 
@@ -974,7 +1001,7 @@
         }
 
         
-        async function downloadBackup() {
+        async function old_downloadBackup() {
             const btn = document.getElementById('btn-backup');
             btn.innerHTML = 'Generando...'; btn.disabled = true;
             try {
@@ -992,6 +1019,69 @@
                 showToast('Error al generar el backup', 'error');
             }
             btn.innerHTML = '📦 Descargar Backup (Migración)'; btn.disabled = false;
+        }
+
+        
+        async function downloadBackup() {
+            const btn = document.getElementById('btn-backup-2');
+            btn.innerHTML = 'Generando...'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/dashboard/backup', { headers: { 'X-Auth-Token': authToken }});
+                if(!res.ok) throw new Error();
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `wa-bot-backup.tar.gz`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+                showToast('Backup descargado correctamente', 'success');
+            } catch(e) {
+                showToast('Error al generar el backup', 'error');
+            }
+            btn.innerHTML = 'Descargar Backup Seguro'; btn.disabled = false;
+        }
+
+        async function handleRestoreSelect() {
+            const file = document.getElementById('restore-file').files[0];
+            if(!file) return;
+            
+            const btn = document.getElementById('btn-restore-select');
+            const status = document.getElementById('restore-status');
+            
+            if(!confirm('⚠️ ADVERTENCIA: Restaurar un backup sobreescribirá TODA tu configuración actual, base de datos y sesión de WhatsApp. El bot se reiniciará. ¿Estás seguro de continuar?')) {
+                document.getElementById('restore-file').value = '';
+                return;
+            }
+
+            btn.disabled = true;
+            status.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;"></span> Subiendo y Restaurando...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/dashboard/restore', {
+                    method: 'POST',
+                    headers: { 'X-Auth-Token': authToken },
+                    body: formData
+                });
+                if(res.ok) {
+                    status.innerHTML = '<span style="color:var(--success);">✅ Backup restaurado con éxito. Reiniciando panel...</span>';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 4000);
+                } else {
+                    const data = await res.json();
+                    status.innerHTML = `<span style="color:var(--accent);">❌ Error: ${data.error || 'Fallo al restaurar'}</span>`;
+                    btn.disabled = false;
+                }
+            } catch(e) {
+                status.innerHTML = '<span style="color:var(--accent);">❌ Error de conexión</span>';
+                btn.disabled = false;
+            }
+            
+            document.getElementById('restore-file').value = '';
         }
 
         // ── Bot Status Polling ───────────────────────────────────

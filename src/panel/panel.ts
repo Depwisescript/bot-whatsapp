@@ -218,6 +218,34 @@ export function startPanel(): void {
         }
     });
 
+
+    app.post('/api/dashboard/restore', authMiddleware, upload.single('file'), (req, res) => {
+        if (!req.file) return res.status(400).json({ error: 'No se recibió el archivo' });
+        
+        try {
+            const { execSync } = require('child_process');
+            const path = require('path');
+            const fs = require('fs');
+            
+            const tempFile = path.resolve('/tmp', `restore-${Date.now()}.tar.gz`);
+            fs.writeFileSync(tempFile, req.file.buffer);
+            
+            const rootDir = path.resolve(__dirname, '../../../');
+            execSync(`tar -xzf "${tempFile}" -C "${rootDir}"`);
+            
+            try { fs.unlinkSync(tempFile); } catch(e) {}
+            
+            res.json({ success: true });
+            
+            setTimeout(() => {
+                process.exit(1);
+            }, 2000);
+        } catch (error) {
+            console.error('Restore error:', error);
+            res.status(500).json({ error: 'Error al restaurar el backup' });
+        }
+    });
+
     // --- End Dashboard API ---
 
     app.post('/api/dashboard/settings', authMiddleware, (req, res) => {
