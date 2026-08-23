@@ -228,7 +228,7 @@ export function startPanel(): void {
             const path = require('path');
             const fs = require('fs');
             
-            const rootDir = path.resolve(__dirname, '../../../');
+            const rootDir = path.resolve(__dirname, '../../');
             const backupFile = path.resolve('/tmp', `backup-${Date.now()}.tar.gz`);
             
             // Execute tar directly
@@ -255,7 +255,7 @@ export function startPanel(): void {
             const tempFile = path.resolve('/tmp', `restore-${Date.now()}.tar.gz`);
             fs.writeFileSync(tempFile, req.file.buffer);
             
-            const rootDir = path.resolve(__dirname, '../../../');
+            const rootDir = path.resolve(__dirname, '../../');
             execSync(`tar -xzf "${tempFile}" -C "${rootDir}"`);
             
             try { fs.unlinkSync(tempFile); } catch(e) {}
