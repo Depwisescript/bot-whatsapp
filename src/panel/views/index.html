@@ -385,6 +385,15 @@
         .tabs-nav button { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); padding: 10px 20px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
         .tabs-nav button.active { background: var(--accent-gradient); color: #fff; border: none; }
 
+    
+        /* Toggle Switch CSS */
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; vertical-align: middle; margin-left: 10px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background: var(--success); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
     </style>
 </head>
 <body>
@@ -490,8 +499,14 @@
                                 <textarea id="cfg-autoreply" rows="4" style="width:100%; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; color:#fff; padding:8px;"></textarea>
                             </div>
                             <div class="form-group">
-                                <label>Proxy SOCKS5 YouTube (Déjalo vacío para apagar)</label>
-                                <input type="text" id="cfg-proxy" placeholder="socks5://38.250.116.74:1080">
+                                <label style="display: flex; align-items: center; justify-content: space-between;">
+                                    <span>Proxy SOCKS5 YouTube (Bypass)</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="cfg-proxy-toggle" onchange="toggleProxyInput()">
+                                        <span class="slider"></span>
+                                    </label>
+                                </label>
+                                <input type="text" id="cfg-proxy" placeholder="socks5://38.250.116.74:1080" style="display: none; margin-top: 8px;">
                             </div>
                         </div>
 
@@ -932,6 +947,18 @@
                 } else showToast('Error al guardar', 'error');
             } catch(e) { showToast('Error', 'error'); }
             btn.innerHTML = '💾 Guardar Configuración y Reiniciar'; btn.disabled = false;
+        }
+
+        
+        function toggleProxyInput() {
+            const isChecked = document.getElementById('cfg-proxy-toggle').checked;
+            const input = document.getElementById('cfg-proxy');
+            if(isChecked) {
+                input.style.display = 'block';
+                if(!input.value) input.value = 'socks5://38.250.116.74:1080';
+            } else {
+                input.style.display = 'none';
+            }
         }
 
         // ── Bot Status Polling ───────────────────────────────────
