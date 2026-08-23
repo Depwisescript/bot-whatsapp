@@ -899,6 +899,17 @@
                 document.getElementById('cfg-owner').value = env.OWNER_NUMBER || '';
                 document.getElementById('cfg-warnings').value = env.MAX_WARNINGS || '4';
                 document.getElementById('cfg-autoreply').value = (env.AUTO_REPLY_MSG || '').replace(/\\n/g, '\n');
+                const pxy = env.YOUTUBE_PROXY !== undefined ? env.YOUTUBE_PROXY : 'socks5://38.250.116.74:1080';
+                if(pxy && pxy.trim() !== '') {
+                    document.getElementById('cfg-proxy-toggle').checked = true;
+                    document.getElementById('cfg-proxy').value = pxy;
+                    document.getElementById('cfg-proxy').style.display = 'block';
+                } else {
+                    document.getElementById('cfg-proxy-toggle').checked = false;
+                    document.getElementById('cfg-proxy').value = 'socks5://38.250.116.74:1080';
+                    document.getElementById('cfg-proxy').style.display = 'none';
+                }
+
                 document.getElementById('cfg-gemini').value = env.GEMINI_API_KEY || '';
                 document.getElementById('cfg-openai').value = env.OPENAI_API_KEY || '';
                 document.getElementById('cfg-openaibase').value = env.OPENAI_BASE_URL || '';
