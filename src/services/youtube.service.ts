@@ -143,6 +143,10 @@ export async function downloadVideo(url: string, title: string): Promise<Downloa
             const command = `yt-dlp ${proxyArg} --max-filesize 100M -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" --no-warnings -o "${filePath}" "${url}"`;
             await execAsync(command);
             
+            if (!fs.existsSync(filePath)) {
+                throw new Error("FILE_TOO_LARGE");
+            }
+            
             const stats = fs.statSync(filePath);
             const sizeMB = stats.size / (1024 * 1024);
             
