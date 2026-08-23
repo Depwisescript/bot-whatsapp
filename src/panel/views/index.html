@@ -543,8 +543,9 @@
                         </div>
                     </div>
 
-                    <div style="margin-top: 24px; text-align: center;">
+                    <div style="margin-top: 24px; text-align: center; display: flex; justify-content: center; gap: 15px;">
                         <button class="btn btn-primary" style="padding: 14px 40px; font-size: 16px;" onclick="saveSettings()" id="btn-save-settings">💾 Guardar Configuración y Reiniciar</button>
+                        <button class="btn btn-danger" style="padding: 14px 20px; font-size: 16px; background-color: var(--accent); border: none;" onclick="downloadBackup()" id="btn-backup">📦 Descargar Backup (Migración)</button>
                     </div>
                 </div>
             </div>
@@ -970,6 +971,27 @@
             } else {
                 input.style.display = 'none';
             }
+        }
+
+        
+        async function downloadBackup() {
+            const btn = document.getElementById('btn-backup');
+            btn.innerHTML = 'Generando...'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/dashboard/backup', { headers: { 'X-Auth-Token': authToken }});
+                if(!res.ok) throw new Error();
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `wa-bot-backup.tar.gz`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+                showToast('Backup descargado correctamente', 'success');
+            } catch(e) {
+                showToast('Error al generar el backup', 'error');
+            }
+            btn.innerHTML = '📦 Descargar Backup (Migración)'; btn.disabled = false;
         }
 
         // ── Bot Status Polling ───────────────────────────────────

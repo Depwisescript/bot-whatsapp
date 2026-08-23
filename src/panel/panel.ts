@@ -196,6 +196,30 @@ export function startPanel(): void {
         }
     });
 
+
+    app.get('/api/dashboard/backup', authMiddleware, (_req, res) => {
+        try {
+            const { execSync } = require('child_process');
+            const path = require('path');
+            const fs = require('fs');
+            
+            const rootDir = path.resolve(__dirname, '../../../');
+            const backupFile = path.resolve('/tmp', `backup-${Date.now()}.tar.gz`);
+            
+            // Execute tar directly
+            execSync(`cd "${rootDir}" && tar -czf "${backupFile}" .env data/bot.db auth_info 2>/dev/null`);
+            
+            res.download(backupFile, 'bot-backup.tar.gz', () => {
+                try { fs.unlinkSync(backupFile); } catch(e) {}
+            });
+        } catch (error) {
+            console.error('Backup error:', error);
+            res.status(500).json({ error: 'Error generating backup' });
+        }
+    });
+
+    // --- End Dashboard API ---
+
     app.post('/api/dashboard/settings', authMiddleware, (req, res) => {
         const { envContent } = req.body;
         if (!envContent) { res.status(400).json({ error: 'No content' }); return; }
