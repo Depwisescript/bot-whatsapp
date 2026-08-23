@@ -8,7 +8,7 @@ import {
     deleteSharedFileById,
     getFilesDir,
 } from '../services/file.service';
-import { globalQR, globalStatus, globalSock, globalPaused, setPaused } from '../connection';
+import { globalQR, globalStatus, globalSock, globalPaused, setPaused, globalForceOffline, setForceOffline } from '../connection';
 
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
@@ -104,7 +104,7 @@ export function startPanel(): void {
     // ── Bot Status ───────────────────────────────────────────────
     app.get('/api/status', authMiddleware, (_req: express.Request, res: express.Response) => {
         res.json({
-            status: globalPaused ? 'paused' : globalStatus,
+            status: globalForceOffline ? 'offline' : (globalPaused ? 'paused' : globalStatus),
             qr: globalQR
         });
     });
@@ -121,7 +121,7 @@ export function startPanel(): void {
     // ── Dashboard API ────────────────────────────────────────────
     app.get('/api/dashboard/stats', authMiddleware, (_req, res) => {
         res.json({
-            status: globalPaused ? 'paused' : globalStatus,
+            status: globalForceOffline ? 'offline' : (globalPaused ? 'paused' : globalStatus),
             qr: globalQR,
             uptime: Math.floor((Date.now() - config.startTime) / 1000),
             memory: Math.round(process.memoryUsage().rss / 1024 / 1024)
@@ -151,6 +151,21 @@ export function startPanel(): void {
         res.json({ paused: globalPaused });
     });
     
+    
+    app.post('/api/dashboard/power/offline', authMiddleware, (_req, res) => {
+        setForceOffline(true);
+        if(globalSock) {
+            try { globalSock.ws.close(); } catch(e) {}
+        }
+        res.json({ offline: true });
+    });
+    
+    app.post('/api/dashboard/power/online', authMiddleware, (_req, res) => {
+        setForceOffline(false);
+        res.json({ success: true });
+        setTimeout(() => process.exit(1), 1000); // PM2 will restart and connect automatically
+    });
+
     app.post('/api/dashboard/power/restart', authMiddleware, (_req, res) => {
         res.json({ success: true });
         setTimeout(() => process.exit(1), 1000);

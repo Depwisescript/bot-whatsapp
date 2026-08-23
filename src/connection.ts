@@ -52,6 +52,8 @@ export let globalQR = '';
 export let globalStatus = 'connecting'; // 'connecting', 'qr', 'connected', 'disconnected'
 export let globalSock: any = null;
 export let globalPaused = false;
+export let globalForceOffline = false;
+export function setForceOffline(v: boolean) { globalForceOffline = v; }
 export function setPaused(v: boolean) { globalPaused = v; } // Exposed for panel interaction
 
 export async function startBot(): Promise<void> {
@@ -96,11 +98,11 @@ export async function startBot(): Promise<void> {
                     const fs = require('fs');
                     fs.rmSync(config.authDir, { recursive: true, force: true });
                 } catch (e) {}
-                setTimeout(startBot, 2000);
+                if(!globalForceOffline) setTimeout(startBot, 2000);
             } else {
                 // Reconnect on any other disconnect reason
                 console.log(`⚡ Reconectando... (razón: ${statusCode || 'desconocida'})`);
-                setTimeout(startBot, 3000);
+                if(!globalForceOffline) setTimeout(startBot, 3000);
             }
         }
 
