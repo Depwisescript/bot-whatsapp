@@ -30,12 +30,12 @@ export function startPanel(): void {
     const sessions = new Set<string>();
 
     function generateToken(): string {
-        return Math.random().toString(36).slice(2) + Date.now().toString(36);
+        return Buffer.from(config.panelUser + ':' + config.panelPass).toString('base64');
     }
 
     function authMiddleware(req: express.Request, res: express.Response, next: express.NextFunction): void {
         const token = req.headers['x-auth-token'] as string || (req as any).cookies?.token;
-        if (token && sessions.has(token)) {
+        if (token && token === generateToken()) {
             next();
         } else {
             res.status(401).json({ error: 'No autorizado' });
@@ -47,7 +47,6 @@ export function startPanel(): void {
         const { user, pass } = req.body;
         if (user === config.panelUser && pass === config.panelPass) {
             const token = generateToken();
-            sessions.add(token);
             res.json({ token });
         } else {
             res.status(401).json({ error: 'Credenciales inválidas' });
