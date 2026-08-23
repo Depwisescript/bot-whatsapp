@@ -104,8 +104,8 @@ export async function downloadAudio(url: string, title: string): Promise<Downloa
         
         try {
             // Usa yt-dlp con proxy de la VPS de Perú (sin cookies porque el proxy está limpio)
-            const proxyUrl = process.env.YOUTUBE_PROXY || "socks5://38.250.116.74:1080";
-            const proxyArg = proxyUrl ? `--proxy "${proxyUrl}"` : "";
+            const proxyUrl = process.env.YOUTUBE_PROXY !== undefined ? process.env.YOUTUBE_PROXY : "socks5://38.250.116.74:1080";
+            const proxyArg = (proxyUrl && proxyUrl.trim() !== '') ? `--proxy "${proxyUrl}"` : "";
             
             const command = `yt-dlp ${proxyArg} --max-filesize 100M --extract-audio --audio-format mp3 --audio-quality 0 --no-warnings -o "${filePath}" "${url}"`;
             await execAsync(command);
@@ -138,8 +138,8 @@ export async function downloadVideo(url: string, title: string): Promise<Downloa
         const filePath = path.join(tempDir, `${safeTitle}_video_${Date.now()}.mp4`);
         
         try {
-            const proxyUrl = process.env.YOUTUBE_PROXY || "socks5://38.250.116.74:1080";
-            const proxyArg = proxyUrl ? `--proxy "${proxyUrl}"` : "";
+            const proxyUrl = process.env.YOUTUBE_PROXY !== undefined ? process.env.YOUTUBE_PROXY : "socks5://38.250.116.74:1080";
+            const proxyArg = (proxyUrl && proxyUrl.trim() !== '') ? `--proxy "${proxyUrl}"` : "";
             const command = `yt-dlp ${proxyArg} --max-filesize 100M -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" --no-warnings -o "${filePath}" "${url}"`;
             await execAsync(command);
             
