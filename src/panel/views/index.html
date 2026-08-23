@@ -889,11 +889,20 @@
             }
             let h = '<div style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px;"><table class="files-table"><thead><tr><th>Grupo</th><th>Usuario</th><th>Warns</th><th>Acción</th></tr></thead><tbody>';
             data.warnings.forEach(w => {
+                const isLid = w.user_jid.includes('@lid');
                 const userNum = w.user_jid.split('@')[0];
                 const groupName = groupMap[w.group_jid] || w.group_jid.split('@')[0];
+                
+                let userDisplay = '';
+                if (isLid) {
+                    userDisplay = `<span style="color: #e6a23c;">👻 Oculto por Privacidad</span><br><span style="font-size: 10px; color: gray;">LID: ${userNum}</span>`;
+                } else {
+                    userDisplay = `<a href="https://wa.me/${userNum}" target="_blank" style="color:var(--primary); text-decoration:none;">+${userNum}</a>`;
+                }
+
                 h += `<tr>
                     <td style="font-size:12px; color:#a0aabf; font-weight: bold;">${groupName}</td>
-                    <td class="file-name-cell"><a href="https://wa.me/${userNum}" target="_blank" style="color:var(--primary); text-decoration:none;">+${userNum}</a></td>
+                    <td class="file-name-cell">${userDisplay}</td>
                     <td style="text-align: center;"><span style="background:var(--accent); color:white; padding: 2px 8px; border-radius: 10px; font-size:12px; font-weight: bold;">${w.count}</span></td>
                     <td style="text-align: center;"><button class="btn btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="clearWarning('${w.group_jid}', '${w.user_jid}')">Perdonar</button></td>
                 </tr>`;
