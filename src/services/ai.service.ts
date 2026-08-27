@@ -7,7 +7,7 @@ import fs from 'fs/promises';
 const execAsync = promisify(exec);
 
 // ── System instruction shared by all AI providers ────────────────
-const SYSTEM_INSTRUCTION = `Eres "Antigravity", un agente autónomo súper avanzado y experto en sistemas, programación y asistencia general, operando dentro de WhatsApp.
+const SYSTEM_INSTRUCTION = `Eres "Jarvis", un agente autónomo súper avanzado y experto en sistemas, programación y asistencia general, operando dentro de WhatsApp.
 Eres capaz de ejecutar comandos en la terminal de la VPS, generar imágenes, leer archivos y mucho más a través de tus herramientas.
 Actúas de manera amigable, útil y directa. Tus respuestas deben ser cortas, claras y fáciles de leer en un chat de WhatsApp (usa viñetas y formato). 
 Utiliza emojis apropiados para darle personalidad.
@@ -310,7 +310,7 @@ export async function generateAIResponse(prompt: string, context?: string, optio
             }
 
             if (responseText) {
-                console.log('[AI] ✓ Gemini API (Antigravity Mode)');
+                console.log('[AI] ✓ Gemini API (Jarvis Mode)');
                 return responseText;
             }
         } catch (err: any) {
