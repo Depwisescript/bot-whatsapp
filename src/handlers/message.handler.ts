@@ -297,7 +297,9 @@ export function setupMessageHandler(sock: WASocket): void {
                                 || (botLidNumber && jidNumber === botLidNumber);
                         });
 
-                        if (isReplyToBot || isMentioningBot) {
+                        const isCallingJarvis = body.toLowerCase().includes('jarvis');
+
+                        if (isReplyToBot || isMentioningBot || isCallingJarvis) {
                             console.log(`[AUTO-AI] Triggered! replyToBot=${isReplyToBot} mentioned=${isMentioningBot}`);
                             let prompt = body;
 
