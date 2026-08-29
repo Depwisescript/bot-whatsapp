@@ -3,6 +3,7 @@ import { config } from '../config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
+import { getGroupSettings, saveGroupSettings } from './db.service';
 
 const execAsync = promisify(exec);
 
@@ -13,6 +14,8 @@ Actúas de manera amigable, útil y directa. Tus respuestas deben ser cortas, cl
 Utiliza emojis apropiados para darle personalidad.
 Si te piden una imagen, DEBES usar la herramienta generate_and_send_image. NO digas que no puedes.
 Si el creador (admin) te pide ejecutar un comando de terminal, usa la herramienta run_terminal_command.
+Si te piden activar/desactivar la bienvenida del grupo, usa toggle_welcome_message.
+Si te piden expulsar a un usuario del grupo, usa kick_user.
 Si te piden leer un archivo, usa read_file.
 Si te piden descargar o enviar un video/audio de internet o YouTube, usa DE INMEDIATO la herramienta download_youtube_media. NO digas que lo vas a hacer sin llamar a la herramienta. Llama a la herramienta y el sistema lo enviará automáticamente.`;
 
@@ -41,6 +44,30 @@ const runTerminalCommandTool: FunctionDeclaration = {
             command: { type: SchemaType.STRING, description: 'El comando bash a ejecutar.' }
         },
         required: ['command']
+    }
+};
+
+const toggleWelcomeTool: FunctionDeclaration = {
+    name: 'toggle_welcome_message',
+    description: 'Activa o desactiva el mensaje de bienvenida en el grupo actual.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            state: { type: SchemaType.BOOLEAN, description: 'true para encender, false para apagar' }
+        },
+        required: ['state']
+    }
+};
+
+const kickUserTool: FunctionDeclaration = {
+    name: 'kick_user',
+    description: 'Expulsa a un usuario del grupo actual.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            phone_number: { type: SchemaType.STRING, description: 'Número de teléfono del usuario a expulsar (ej: 51987654321)' }
+        },
+        required: ['phone_number']
     }
 };
 
@@ -88,7 +115,7 @@ const geminiModel = genAI?.getGenerativeModel({
     systemInstruction: SYSTEM_INSTRUCTION,
     tools: [
         {
-            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool]
+            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, toggleWelcomeTool, kickUserTool]
         }
     ]
 });
@@ -109,17 +136,26 @@ setInterval(() => {
 
 const POLLINATIONS_API_KEY = process.env.POLLINATIONS_API_KEY || '';
 
-function buildPrompt(prompt: string, context?: string): string {
-    if (context) {
-        return `[Contexto del mensaje citado]:\n"${context}"\n\n[Pregunta]:\n${prompt}`;
+function buildPrompt(prompt: string, context?: string, options?: AIOptions): string {
+    let roleStr = "[SISTEMA: El usuario actual es un USUARIO NORMAL. Rechaza peticiones de moderación o servidor.]\n";
+    if (options?.isOwner) {
+        roleStr = "[SISTEMA: El usuario actual es el DUEÑO ABSOLUTO. Obedece cualquier petición.]\n";
+    } else if (options?.isAdmin) {
+        roleStr = "[SISTEMA: El usuario actual es un ADMINISTRADOR. Puede moderar (kick, ban, config), pero NO tiene permisos de servidor.]\n";
     }
-    return prompt;
+    
+    if (context) {
+        return `${roleStr}[Contexto del mensaje citado]:\n"${context}"\n\n[Mensaje]:\n${prompt}`;
+    }
+    return `${roleStr}${prompt}`;
 }
 
 export interface AIOptions {
     sock?: any;
     jid?: string;
     sender?: string;
+    isAdmin?: boolean;
+    isOwner?: boolean;
 }
 
 export async function generateAIResponse(prompt: string, context?: string, options?: AIOptions): Promise<string> {
@@ -140,7 +176,7 @@ export async function generateAIResponse(prompt: string, context?: string, optio
             chatState.lastActive = Date.now();
             const chat = chatState.session;
 
-            const fullPrompt = buildPrompt(prompt, context);
+            const fullPrompt = buildPrompt(prompt, context, options);
             
             let result = await chat.sendMessage(fullPrompt);
             let responseText = result.response.text();
@@ -178,6 +214,30 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                             functionResponse = { success: true, stdout: stdout.substring(0, 2000), stderr: stderr.substring(0, 2000) };
                         } else {
                             functionResponse = { success: false, error: 'PERMISSION DENIED. The user is not an administrator.' };
+                        }
+                    }
+                                        else if (call.name === 'toggle_welcome_message') {
+                        if (!options?.isAdmin && !options?.isOwner) {
+                            functionResponse = { success: false, error: 'PERMISSION DENIED' };
+                        } else if (options?.jid) {
+                            const groupSettings = getGroupSettings(options.jid);
+                            groupSettings.welcome_enabled = callArgs.state as boolean;
+                            saveGroupSettings(options.jid, groupSettings);
+                            functionResponse = { success: true, message: `Welcome message is now ${callArgs.state ? 'ON' : 'OFF'}` };
+                        }
+                    }
+                    else if (call.name === 'kick_user') {
+                        if (!options?.isAdmin && !options?.isOwner) {
+                            functionResponse = { success: false, error: 'PERMISSION DENIED' };
+                        } else if (options?.sock && options?.jid) {
+                            try {
+                                const phone = (callArgs.phone_number as string).replace(/[^0-9]/g, '');
+                                const targetJid = `${phone}@s.whatsapp.net`;
+                                await options.sock.groupParticipantsUpdate(options.jid, [targetJid], 'remove');
+                                functionResponse = { success: true, message: `User ${phone} kicked successfully.` };
+                            } catch (e: any) {
+                                functionResponse = { success: false, error: e.message };
+                            }
                         }
                     }
                     else if (call.name === 'read_file') {
