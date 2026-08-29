@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import { getGroupSettings, setWelcomeMsg } from './db.service';
+import { getCommand } from '../commands';
 
 const execAsync = promisify(exec);
 
@@ -16,6 +17,14 @@ Si te piden una imagen, DEBES usar la herramienta generate_and_send_image. NO di
 Si el creador (admin) te pide ejecutar un comando de terminal, usa la herramienta run_terminal_command.
 Si te piden activar/desactivar la bienvenida del grupo, usa toggle_welcome_message.
 Si te piden expulsar a un usuario del grupo, usa kick_user.
+
+Tienes acceso a la herramienta 'execute_internal_command'. Úsala para ejecutar CUALQUIERA de estos comandos del sistema en nombre del usuario, pasándole el nombre del comando y los argumentos necesarios:
+- ban (expulsar y banear), mute, unmute, warn, warnings, resetwarn, promote, demote, unban, del (borrar mensaje citado)
+- antinsfw, autoapprove, setwelcome, setbye, slowmode
+- tagall (mencionar a todos), link, rules, level, top, perfil, remind, poll, clima, traducir
+- decrypt, revelar, unconfig, sticker, play, video
+
+Ejemplo: Si el usuario dice 'Jarvis, haz a @12345 admin', tú llamas a execute_internal_command con command='promote' y target_phone='12345'.
 Si te piden leer un archivo, usa read_file.
 Si te piden descargar o enviar un video/audio de internet o YouTube, usa DE INMEDIATO la herramienta download_youtube_media. NO digas que lo vas a hacer sin llamar a la herramienta. Llama a la herramienta y el sistema lo enviará automáticamente.`;
 
@@ -47,6 +56,19 @@ const runTerminalCommandTool: FunctionDeclaration = {
     }
 };
 
+const executeInternalCommandTool: FunctionDeclaration = {
+    name: 'execute_internal_command',
+    description: 'Ejecuta un comando nativo del bot (ej: ban, mute, promote, tagall, etc.).',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            command: { type: SchemaType.STRING, description: 'Nombre del comando (sin prefijo)' },
+            args: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: 'Argumentos del comando (ej: numero de telefono, texto)' },
+            target_phone: { type: SchemaType.STRING, description: 'Opcional: Si el comando requiere mencionar a un usuario (ej: ban, promote), pon su número de teléfono aquí (ej: 51987654321)' }
+        },
+        required: ['command']
+    }
+};
 const toggleWelcomeTool: FunctionDeclaration = {
     name: 'toggle_welcome_message',
     description: 'Activa o desactiva el mensaje de bienvenida en el grupo actual.',
@@ -115,7 +137,7 @@ const geminiModel = genAI?.getGenerativeModel({
     systemInstruction: SYSTEM_INSTRUCTION,
     tools: [
         {
-            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, toggleWelcomeTool, kickUserTool]
+            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, toggleWelcomeTool, kickUserTool, executeInternalCommandTool]
         }
     ]
 });
@@ -156,6 +178,7 @@ export interface AIOptions {
     sender?: string;
     isAdmin?: boolean;
     isOwner?: boolean;
+    message?: any;
 }
 
 export async function generateAIResponse(prompt: string, context?: string, options?: AIOptions): Promise<string> {
@@ -226,6 +249,55 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                                 setWelcomeMsg(options.jid, null);
                             }
                             functionResponse = { success: true, message: `Welcome message is now ${callArgs.state ? 'ON' : 'OFF'}` };
+                        }
+                    }
+                                        else if (call.name === 'execute_internal_command') {
+                        const cmdName = callArgs.command as string;
+                        const cmdArgs = (callArgs.args as string[]) || [];
+                        const targetPhone = callArgs.target_phone as string;
+                        
+                        const commandObj = getCommand(cmdName);
+                        if (!commandObj) {
+                            functionResponse = { success: false, error: 'Command not found.' };
+                        } else if (commandObj.adminOnly && !options?.isAdmin && !options?.isOwner) {
+                            functionResponse = { success: false, error: 'PERMISSION DENIED' };
+                        } else if (options?.sock && options?.jid && options?.message) {
+                            try {
+                                const mentionedJids = [];
+                                if (targetPhone) {
+                                    const cleanedPhone = targetPhone.replace(/[^0-9]/g, '');
+                                    if (cleanedPhone) mentionedJids.push(`${cleanedPhone}@s.whatsapp.net`);
+                                }
+                                
+                                const contextInfo = options.message?.message?.extendedTextMessage?.contextInfo;
+                                const quotedMsg = contextInfo?.quotedMessage || null;
+                                let quotedBody = '';
+                                if (quotedMsg) {
+                                    quotedBody = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text || '';
+                                }
+
+                                const ctx = {
+                                    sock: options.sock,
+                                    message: options.message,
+                                    groupJid: options.jid,
+                                    senderJid: options.sender!,
+                                    args: cmdArgs,
+                                    body: `!${cmdName} ${cmdArgs.join(' ')}`,
+                                    mentionedJids: mentionedJids,
+                                    quotedMessageId: contextInfo?.stanzaId,
+                                    quotedParticipant: contextInfo?.participant,
+                                    quotedMessageBody: quotedBody,
+                                    quotedMessage: quotedMsg,
+                                    isAdmin: !!options.isAdmin,
+                                    isOwner: !!options.isOwner
+                                };
+                                await commandObj.execute(ctx);
+                                functionResponse = { success: true, message: `Command ${cmdName} executed successfully.` };
+                            } catch (e: any) {
+                                functionResponse = { success: false, error: e.message };
+                            }
+                        } else {
+                            functionResponse = { success: false, error: 'Missing required socket or message options.' };
                         }
                     }
                     else if (call.name === 'kick_user') {

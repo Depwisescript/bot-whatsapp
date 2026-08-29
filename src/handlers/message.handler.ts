@@ -321,7 +321,7 @@ export function setupMessageHandler(sock: WASocket): void {
                                     const response = await generateAIResponse(
                                         prompt || 'Responde a este mensaje de forma breve y útil.',
                                         quotedBody,
-                                        { sock, jid: groupJid, sender: senderJid, isAdmin, isOwner }
+                                        { sock, jid: groupJid, sender: senderJid, isAdmin, isOwner, message }
                                     );
                                     await sock.sendMessage(groupJid, { text: response });
                                 } catch (err) {
