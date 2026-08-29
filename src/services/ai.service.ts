@@ -3,7 +3,7 @@ import { config } from '../config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
-import { getGroupSettings, saveGroupSettings } from './db.service';
+import { getGroupSettings, setWelcomeMsg } from './db.service';
 
 const execAsync = promisify(exec);
 
@@ -220,9 +220,11 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                         if (!options?.isAdmin && !options?.isOwner) {
                             functionResponse = { success: false, error: 'PERMISSION DENIED' };
                         } else if (options?.jid) {
-                            const groupSettings = getGroupSettings(options.jid);
-                            groupSettings.welcome_enabled = callArgs.state as boolean;
-                            saveGroupSettings(options.jid, groupSettings);
+                            if (callArgs.state) {
+                                setWelcomeMsg(options.jid, "¡Hola @usuario, bienvenido al grupo! 🎉");
+                            } else {
+                                setWelcomeMsg(options.jid, null);
+                            }
                             functionResponse = { success: true, message: `Welcome message is now ${callArgs.state ? 'ON' : 'OFF'}` };
                         }
                     }
