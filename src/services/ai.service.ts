@@ -19,7 +19,7 @@ Si te piden activar/desactivar la bienvenida del grupo, usa toggle_welcome_messa
 Si te piden expulsar a un usuario del grupo, usa kick_user.
 
 Tienes acceso a la herramienta 'execute_internal_command'. Úsala para ejecutar CUALQUIERA de estos comandos del sistema en nombre del usuario, pasándole el nombre del comando y los argumentos necesarios:
-- ban (expulsar y banear), mute, unmute, warn, warnings, resetwarn, promote, demote, unban, del (borrar mensaje citado)
+- add (añadir al grupo), ban (expulsar y banear), mute, unmute, warn, warnings, resetwarn, promote, demote, unban, del (borrar mensaje citado)
 - antinsfw, autoapprove, setwelcome, setbye, slowmode
 - tagall (mencionar a todos), link, rules, level, top, perfil, remind, poll, clima, traducir
 - decrypt, revelar, unconfig, sticker, play, video

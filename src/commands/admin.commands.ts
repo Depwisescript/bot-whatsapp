@@ -32,6 +32,38 @@ export function registerAdminCommands(): void {
         },
     });
 
+    // ── !add @user ──────────────────────────────────────────────
+    registerCommand({
+        name: 'add',
+        description: 'Añadir un miembro al grupo',
+        usage: '!add @usuario o !add 51999999999',
+        adminOnly: true,
+        execute: async (ctx: CommandContext) => {
+            let target = ctx.mentionedJids[0] || ctx.quotedParticipant;
+            if (!target && ctx.args.length > 0) {
+                target = ctx.args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+            }
+            if (!target) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '⚠️ Debes mencionar al usuario, citar un mensaje suyo o escribir su número.\nUso: !add @usuario o !add 51999999999',
+                });
+                return;
+            }
+
+            try {
+                await ctx.sock.groupParticipantsUpdate(ctx.groupJid, [target], 'add');
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: `✅ @${target.split('@')[0]} ha sido añadido al grupo.`,
+                    mentions: [target],
+                });
+            } catch (err) {
+                await ctx.sock.sendMessage(ctx.groupJid, {
+                    text: '❌ No pude añadir al usuario. Puede que tenga bloqueadas las invitaciones a grupos o no soy admin.',
+                });
+            }
+        },
+    });
+
     // ── !ban @user ───────────────────────────────────────────────
     registerCommand({
         name: 'ban',
