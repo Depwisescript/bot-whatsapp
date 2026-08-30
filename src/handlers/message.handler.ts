@@ -379,11 +379,11 @@ export function setupMessageHandler(sock: WASocket): void {
                 if (commandName !== 'on' && commandName !== 'off') {
                     if (command) {
                         await sock.sendMessage(groupJid, { 
-                            text: '❌ *Los comandos manuales con prefijo (!) han sido deshabilitados de forma permanente.*
+                            text: `❌ *Los comandos manuales con prefijo (!) han sido deshabilitados de forma permanente.*
 
 🤖 Por favor, pídemelo conversando conmigo, por ejemplo:
 _«Jarvis, expulsa a este usuario»_
-_«Jarvis, siléncialo por 2 minutos»_'
+_«Jarvis, siléncialo por 2 minutos»_`
                         });
                         continue;
                     }
