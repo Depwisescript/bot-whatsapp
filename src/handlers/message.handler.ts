@@ -323,7 +323,7 @@ export function setupMessageHandler(sock: WASocket): void {
                                         prompt || 'Responde a este mensaje de forma breve y útil.',
                                         quotedBody,
                                         { sock, jid: groupJid, sender: senderJid, isAdmin, isOwner,
-                    isGroupCreator: isGroupCreatorFlag, isGroupCreator: isGroupCreatorFlag, message }
+                    isGroupCreator: isGroupCreatorFlag, message }
                                     );
                                     await sock.sendMessage(groupJid, { text: response });
                                 } catch (err) {
