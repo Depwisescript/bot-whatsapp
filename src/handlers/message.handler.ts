@@ -475,3 +475,13 @@ export function setupMessageHandler(sock: WASocket): void {
         }
     });
 }
+
+async function isGroupCreator(sock: any, groupJid: string, userJid: string): Promise<boolean> {
+    try {
+        const metadata = await getCachedGroupMetadata(sock, groupJid);
+        const participant = metadata.participants.find((p: any) => p.id === userJid);
+        return participant?.admin === 'superadmin';
+    } catch {
+        return false;
+    }
+}
