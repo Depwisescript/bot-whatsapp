@@ -127,11 +127,12 @@ export function registerAdminCommands(): void {
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
             const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
-            const timeRaw = ctx.args[1];
+            // AI sends args=['2m'], normal usage sends args=['@123', '2m']
+            const timeRaw = ctx.args.length === 1 ? ctx.args[0] : ctx.args[1];
 
             if (!target || !timeRaw) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
-                    text: '⚠️ Uso correcto: !mute @usuario 30m\nFormatos de tiempo: 30m (minutos), 2h (horas)',
+                    text: '⚠️ Por favor especifica el tiempo. Ejemplos: 30m (minutos), 2h (horas)',
                 });
                 return;
             }
@@ -198,7 +199,7 @@ export function registerAdminCommands(): void {
                 return;
             }
 
-            const reason = ctx.args.slice(1).join(' ') || 'Sin razón especificada';
+            const reason = (ctx.args.length === 1 && !ctx.args[0].includes('@')) ? ctx.args[0] : (ctx.args.slice(1).join(' ') || 'Sin razón especificada');
             const warningCount = addWarning(ctx.groupJid, target, reason);
 
             if (warningCount >= config.maxWarnings) {
