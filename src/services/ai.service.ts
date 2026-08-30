@@ -218,7 +218,9 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                         const commandObj = getCommand(cmdName);
                         if (!commandObj) {
                             functionResponse = { success: false, error: 'Command not found.' };
-                        } else if (commandObj.adminOnly && !options?.isAdmin && !options?.isOwner) {
+                        } else if (commandObj.superAdminOnly && !options?.isGroupCreator && !options?.isOwner) {
+                            functionResponse = { success: false, error: 'PERMISSION DENIED: ONLY SUPERADMIN/OWNER CAN EXECUTE THIS.' };
+                        } else if (commandObj.adminOnly && !commandObj.superAdminOnly && !options?.isAdmin && !options?.isOwner) {
                             functionResponse = { success: false, error: 'PERMISSION DENIED' };
                         } else if (options?.sock && options?.jid && options?.message) {
                             try {

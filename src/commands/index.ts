@@ -27,6 +27,7 @@ export interface CommandContext {
     isAdmin: boolean;
     /** Whether the sender is the bot owner */
     isOwner: boolean;
+    isGroupCreator: boolean;
 }
 
 export interface Command {

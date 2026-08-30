@@ -322,7 +322,8 @@ export function setupMessageHandler(sock: WASocket): void {
                                     const response = await generateAIResponse(
                                         prompt || 'Responde a este mensaje de forma breve y útil.',
                                         quotedBody,
-                                        { sock, jid: groupJid, sender: senderJid, isAdmin, isOwner, isGroupCreator: isGroupCreatorFlag, message }
+                                        { sock, jid: groupJid, sender: senderJid, isAdmin, isOwner,
+                    isGroupCreator: isGroupCreatorFlag, isGroupCreator: isGroupCreatorFlag, message }
                                     );
                                     await sock.sendMessage(groupJid, { text: response });
                                 } catch (err) {
@@ -401,8 +402,16 @@ export function setupMessageHandler(sock: WASocket): void {
                     continue;
                 }
 
+                // Check superadmin-only permission
+                if (command.superAdminOnly && !isGroupCreatorFlag && !isOwner) {
+                    await sock.sendMessage(groupJid, {
+                        text: '👑 Este comando es exclusivo para el CREADOR del grupo.',
+                    });
+                    continue;
+                }
+                
                 // Check admin-only permission
-                if (command.adminOnly && !isAdmin && !isOwner) {
+                if (command.adminOnly && !command.superAdminOnly && !isAdmin && !isOwner) {
                     await sock.sendMessage(groupJid, {
                         text: '🔒 Este comando solo puede ser usado por admins del grupo.',
                     });
@@ -425,6 +434,7 @@ export function setupMessageHandler(sock: WASocket): void {
                     quotedMessage: contextInfo?.quotedMessage || null,
                     isAdmin,
                     isOwner,
+                    isGroupCreator: isGroupCreatorFlag,
                 };
 
                 await command.execute(ctx);
