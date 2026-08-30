@@ -157,6 +157,7 @@ export function registerExtraCommands(): void {
         description: 'Personalizar mensaje de bienvenida',
         usage: '!setwelcome Hola {user}, bienvenido a {group}!',
         adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const msg = ctx.args.join(' ');
 
@@ -184,6 +185,7 @@ export function registerExtraCommands(): void {
         description: 'Personalizar mensaje de despedida',
         usage: '!setbye Adiós {user}!',
         adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const msg = ctx.args.join(' ');
 
