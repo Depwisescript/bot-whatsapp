@@ -122,7 +122,8 @@ const dmCooldownCache = new Set<string>();
  */
 export function setupMessageHandler(sock: WASocket): void {
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
-        if (globalPaused) return;
+        import { setPaused } from '../connection';
+        // if (globalPaused) return; handled per message
         if (type !== 'notify') return;
 
         for (const message of messages) {
@@ -133,8 +134,29 @@ export function setupMessageHandler(sock: WASocket): void {
                 const remoteJid = message.key.remoteJid;
                 if (!remoteJid) continue;
 
-                // Extract message body early to ignore background/protocol messages
                 const body = getMessageBody(message);
+
+                
+                const senderJidTemp = message.key.participant || remoteJid;
+                const isOwnerTemp = config.ownerNumber ? (senderJidTemp.includes(config.ownerNumber) || senderJidTemp.includes('272807967650018')) : false;
+
+                if (body && isOwnerTemp) {
+                    const tBody = body.trim().toLowerCase();
+                    if (tBody === '!on') {
+                        setPaused(false);
+                        await sock.sendMessage(remoteJid, { text: '🟢 ¡Jarvis ha sido ENCENDIDO y está listo para escuchar!' });
+                        continue;
+                    } else if (tBody === '!off') {
+                        setPaused(true);
+                        await sock.sendMessage(remoteJid, { text: '🔴 ¡Jarvis ha sido APAGADO! Solo responderé cuando me enciendas con !on.' });
+                        continue;
+                    }
+                }
+
+                if (globalPaused) continue; // Si está apagado, ignorar TODO lo demás.
+
+                // Extract message body early to ignore background/protocol messages
+                
 
                 // ── Auto-reply for Direct Messages (DMs) ──
                 // Now supports standard numbers AND @lid (WhatsApp Privacy linked IDs)
@@ -351,6 +373,23 @@ export function setupMessageHandler(sock: WASocket): void {
                 if (!commandName) continue;
 
                 const command = getCommand(commandName);
+                
+                // --- SECCIÓN: DESHABILITAR COMANDOS MANUALES ---
+                // El dueño ordenó que TODOS los comandos deben pasar por Jarvis (IA).
+                if (commandName !== 'on' && commandName !== 'off') {
+                    if (command) {
+                        await sock.sendMessage(groupJid, { 
+                            text: '❌ *Los comandos manuales con prefijo (!) han sido deshabilitados de forma permanente.*
+
+🤖 Por favor, pídemelo conversando conmigo, por ejemplo:
+_«Jarvis, expulsa a este usuario»_
+_«Jarvis, siléncialo por 2 minutos»_'
+                        });
+                        continue;
+                    }
+                }
+                // ------------------------------------------------
+
                 if (!command) {
                     // Try to see if it's a dynamic file command
                     const { getSharedFiles, getSharedFilesGlobal, readFileBuffer } = await import('../services/file.service');
