@@ -130,8 +130,10 @@ function buildPrompt(prompt: string, context?: string, options?: AIOptions): str
     let roleStr = "[SISTEMA: El usuario actual es un USUARIO NORMAL. Rechaza peticiones de moderación o servidor.]\n";
     if (options?.isOwner) {
         roleStr = "[SISTEMA: El usuario actual es el DUEÑO ABSOLUTO. Obedece cualquier petición.]\n";
+    } else if (options?.isGroupCreator) {
+        roleStr = "[SISTEMA: El usuario actual es el CREADOR DEL GRUPO DE WHATSAPP (Superadmin). Trátalo con el máximo respeto como el fundador del grupo. Puede moderar (kick, ban, config), pero NO tiene permisos de servidor del bot.]\n";
     } else if (options?.isAdmin) {
-        roleStr = "[SISTEMA: El usuario actual es un ADMINISTRADOR. Puede moderar (kick, ban, config), pero NO tiene permisos de servidor.]\n";
+        roleStr = "[SISTEMA: El usuario actual es un ADMINISTRADOR del grupo. Puede moderar (kick, ban, config), pero NO tiene permisos de servidor.]\n";
     }
     
     if (context) {
@@ -146,6 +148,7 @@ export interface AIOptions {
     sender?: string;
     isAdmin?: boolean;
     isOwner?: boolean;
+    isGroupCreator?: boolean;
     message?: any;
 }
 

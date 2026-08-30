@@ -162,6 +162,7 @@ export function setupMessageHandler(sock: WASocket): void {
 
                 // Check if sender is admin
                 const isAdmin = await isGroupAdmin(sock, groupJid, senderJid);
+                const isGroupCreatorFlag = await isGroupCreator(sock, groupJid, senderJid);
                 const isOwner = config.ownerNumber
                     ? (senderJid.includes(config.ownerNumber) || senderJid.includes('272807967650018'))
                     : false;
@@ -321,7 +322,7 @@ export function setupMessageHandler(sock: WASocket): void {
                                     const response = await generateAIResponse(
                                         prompt || 'Responde a este mensaje de forma breve y útil.',
                                         quotedBody,
-                                        { sock, jid: groupJid, sender: senderJid, isAdmin, isOwner, message }
+                                        { sock, jid: groupJid, sender: senderJid, isAdmin, isOwner, isGroupCreator: isGroupCreatorFlag, message }
                                     );
                                     await sock.sendMessage(groupJid, { text: response });
                                 } catch (err) {
