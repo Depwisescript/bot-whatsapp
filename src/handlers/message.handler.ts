@@ -1,6 +1,6 @@
 import { WASocket, proto, GroupMetadata, downloadMediaMessage } from '@whiskeysockets/baileys';
 import { config } from '../config';
-import { globalPaused } from '../connection';
+import { globalPaused, setPaused } from '../connection';
 import { getCommand, CommandContext } from '../commands/index';
 import { checkMessage, handleViolation } from './moderation.handler';
 import { isMuted, addUserXP, getGroupSettings, addAuditLog, saveContactName } from '../services/db.service';
@@ -122,7 +122,7 @@ const dmCooldownCache = new Set<string>();
  */
 export function setupMessageHandler(sock: WASocket): void {
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
-        import { setPaused } from '../connection';
+        // import { setPaused } from "../connection";
         // if (globalPaused) return; handled per message
         if (type !== 'notify') return;
 
