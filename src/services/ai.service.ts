@@ -69,6 +69,8 @@ const executeInternalCommandTool: FunctionDeclaration = {
         required: ['command']
     }
 };
+
+
 const readFileTool: FunctionDeclaration = {
     name: 'read_file',
     description: 'Lee el contenido de un archivo en la VPS.',
@@ -215,7 +217,7 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                             functionResponse = { success: false, error: 'PERMISSION DENIED. The user is not an administrator.' };
                         }
                     }
-                                        else if (call.name === 'execute_internal_command') {
+                                                            else if (call.name === 'execute_internal_command') {
                         const cmdName = callArgs.command as string;
                         const cmdArgs = (callArgs.args as string[]) || [];
                         const targetPhone = callArgs.target_phone as string;
@@ -229,12 +231,13 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                             try {
                                 const contextInfo = options.message?.message?.extendedTextMessage?.contextInfo;
                                 const mentionedJids = [];
+                                if (targetPhone) {
                                     const cleanedPhone = targetPhone.replace(/[^0-9]/g, '');
                                     if (cleanedPhone) mentionedJids.push(`${cleanedPhone}@s.whatsapp.net`);
-                                }
                                 } else if (contextInfo?.participant) {
                                     mentionedJids.push(contextInfo.participant);
                                 }
+                                const quotedMsg = contextInfo?.quotedMessage || null;
                                 let quotedBody = '';
                                 if (quotedMsg) {
                                     quotedBody = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text || '';
@@ -263,7 +266,6 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                         } else {
                             functionResponse = { success: false, error: 'Missing required socket or message options.' };
                         }
-                    }
                     }
                     else if (call.name === 'read_file') {
                         const senderNum = options?.sender?.split('@')[0]?.split(':')[0];
