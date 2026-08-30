@@ -377,7 +377,10 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                         if (options?.jid && options?.sender) {
                             chatSessions.delete(`${options.jid}_${options.sender}`);
                         }
-                        return '¡Listo! ✅'; 
+                        if (functionResponse && !functionResponse.success) {
+                            return `❌ No pude realizar la acción: ${functionResponse.error}`;
+                        }
+                        return '✅ Acción procesada.'; 
                     }
 
                 } catch (toolErr: any) {
