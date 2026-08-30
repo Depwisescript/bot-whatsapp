@@ -251,7 +251,8 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                                     quotedMessageBody: quotedBody,
                                     quotedMessage: quotedMsg,
                                     isAdmin: !!options.isAdmin,
-                                    isOwner: !!options.isOwner
+                                    isOwner: !!options.isOwner,
+                                    isGroupCreator: !!options.isGroupCreator
                                 };
                                 await commandObj.execute(ctx);
                                 functionResponse = { success: true, message: `Command ${cmdName} executed successfully.` };

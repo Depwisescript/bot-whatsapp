@@ -38,7 +38,8 @@ export interface Command {
     /** Usage example */
     usage: string;
     /** Whether only admins can use this command */
-    adminOnly: boolean;
+    adminOnly?: boolean;
+    superAdminOnly?: boolean;
     /** Execute the command */
     execute: (ctx: CommandContext) => Promise<void>;
 }
