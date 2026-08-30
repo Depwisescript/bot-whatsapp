@@ -69,29 +69,6 @@ const executeInternalCommandTool: FunctionDeclaration = {
         required: ['command']
     }
 };
-const toggleWelcomeTool: FunctionDeclaration = {
-    name: 'toggle_welcome_message',
-    description: 'Activa o desactiva el mensaje de bienvenida en el grupo actual.',
-    parameters: {
-        type: SchemaType.OBJECT,
-        properties: {
-            state: { type: SchemaType.BOOLEAN, description: 'true para encender, false para apagar' }
-        },
-        required: ['state']
-    }
-};
-
-const kickUserTool: FunctionDeclaration = {
-    name: 'kick_user',
-    description: 'Expulsa a un usuario del grupo actual.',
-    parameters: {
-        type: SchemaType.OBJECT,
-        properties: {
-            phone_number: { type: SchemaType.STRING, description: 'Número de teléfono del usuario a expulsar (ej: 51987654321)' }
-        },
-        required: ['phone_number']
-    }
-};
 
 const readFileTool: FunctionDeclaration = {
     name: 'read_file',
@@ -137,7 +114,7 @@ const geminiModel = genAI?.getGenerativeModel({
     systemInstruction: SYSTEM_INSTRUCTION,
     tools: [
         {
-            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, toggleWelcomeTool, kickUserTool, executeInternalCommandTool]
+            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, executeInternalCommandTool]
         }
     ]
 });
@@ -239,82 +216,7 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                             functionResponse = { success: false, error: 'PERMISSION DENIED. The user is not an administrator.' };
                         }
                     }
-                                        else if (call.name === 'toggle_welcome_message') {
-                        if (!options?.isAdmin && !options?.isOwner) {
-                            functionResponse = { success: false, error: 'PERMISSION DENIED' };
-                        } else if (options?.jid) {
-                            if (callArgs.state) {
-                                setWelcomeMsg(options.jid, "¡Hola @usuario, bienvenido al grupo! 🎉");
-                            } else {
-                                setWelcomeMsg(options.jid, null);
-                            }
-                            functionResponse = { success: true, message: `Welcome message is now ${callArgs.state ? 'ON' : 'OFF'}` };
-                        }
-                    }
-                                        else if (call.name === 'execute_internal_command') {
-                        const cmdName = callArgs.command as string;
-                        const cmdArgs = (callArgs.args as string[]) || [];
-                        const targetPhone = callArgs.target_phone as string;
-                        
-                        const commandObj = getCommand(cmdName);
-                        if (!commandObj) {
-                            functionResponse = { success: false, error: 'Command not found.' };
-                        } else if (commandObj.adminOnly && !options?.isAdmin && !options?.isOwner) {
-                            functionResponse = { success: false, error: 'PERMISSION DENIED' };
-                        } else if (options?.sock && options?.jid && options?.message) {
-                            try {
-                                const mentionedJids = [];
-                                if (targetPhone) {
-                                    const cleanedPhone = targetPhone.replace(/[^0-9]/g, '');
-                                    if (cleanedPhone) mentionedJids.push(`${cleanedPhone}@s.whatsapp.net`);
-                                }
-                                
-                                const contextInfo = options.message?.message?.extendedTextMessage?.contextInfo;
-                                const quotedMsg = contextInfo?.quotedMessage || null;
-                                let quotedBody = '';
-                                if (quotedMsg) {
-                                    quotedBody = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text || '';
-                                }
-
-                                const ctx = {
-                                    sock: options.sock,
-                                    message: options.message,
-                                    groupJid: options.jid,
-                                    senderJid: options.sender!,
-                                    args: cmdArgs,
-                                    body: `!${cmdName} ${cmdArgs.join(' ')}`,
-                                    mentionedJids: mentionedJids,
-                                    quotedMessageId: contextInfo?.stanzaId,
-                                    quotedParticipant: contextInfo?.participant,
-                                    quotedMessageBody: quotedBody,
-                                    quotedMessage: quotedMsg,
-                                    isAdmin: !!options.isAdmin,
-                                    isOwner: !!options.isOwner
-                                };
-                                await commandObj.execute(ctx);
-                                functionResponse = { success: true, message: `Command ${cmdName} executed successfully.` };
-                            } catch (e: any) {
-                                functionResponse = { success: false, error: e.message };
-                            }
-                        } else {
-                            functionResponse = { success: false, error: 'Missing required socket or message options.' };
-                        }
-                    }
-                    else if (call.name === 'kick_user') {
-                        if (!options?.isAdmin && !options?.isOwner) {
-                            functionResponse = { success: false, error: 'PERMISSION DENIED' };
-                        } else if (options?.sock && options?.jid) {
-                            try {
-                                const phone = (callArgs.phone_number as string).replace(/[^0-9]/g, '');
-                                const targetJid = `${phone}@s.whatsapp.net`;
-                                await options.sock.groupParticipantsUpdate(options.jid, [targetJid], 'remove');
-                                functionResponse = { success: true, message: `User ${phone} kicked successfully.` };
-                            } catch (e: any) {
-                                functionResponse = { success: false, error: e.message };
-                            }
-                        }
-                    }
-                    else if (call.name === 'read_file') {
+                                        else if (call.name === 'read_file') {
                         const senderNum = options?.sender?.split('@')[0]?.split(':')[0];
                         if (senderNum && (config.ownerNumber === senderNum || senderNum === '272807967650018')) {
                             const content = await fs.readFile(callArgs.filepath as string, 'utf-8');

@@ -10,7 +10,7 @@ export function registerAdminCommands(): void {
         usage: '!kick @usuario',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
                     text: '⚠️ Debes mencionar al usuario que quieres expulsar.\nUso: !kick @usuario',
@@ -39,7 +39,7 @@ export function registerAdminCommands(): void {
         usage: '!ban @usuario',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
                     text: '⚠️ Debes mencionar al usuario.\nUso: !ban @usuario',
@@ -94,7 +94,7 @@ export function registerAdminCommands(): void {
         usage: '!mute @usuario 30m (m=minutos, h=horas)',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             const timeRaw = ctx.args[1];
 
             if (!target || !timeRaw) {
@@ -135,7 +135,7 @@ export function registerAdminCommands(): void {
         usage: '!unmute @usuario',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
                     text: '⚠️ Debes mencionar al usuario.\nUso: !unmute @usuario',
@@ -158,7 +158,7 @@ export function registerAdminCommands(): void {
         usage: '!warn @usuario [razón]',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
                     text: '⚠️ Debes mencionar al usuario.\nUso: !warn @usuario [razón]',
@@ -199,7 +199,7 @@ export function registerAdminCommands(): void {
         usage: '!warnings @usuario',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
                     text: '⚠️ Debes mencionar al usuario.\nUso: !warnings @usuario',
@@ -235,7 +235,7 @@ export function registerAdminCommands(): void {
         usage: '!resetwarn @usuario',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
                     text: '⚠️ Debes mencionar al usuario.\nUso: !resetwarn @usuario',
@@ -258,7 +258,7 @@ export function registerAdminCommands(): void {
         usage: '!promote @usuario',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
                     text: '⚠️ Debes mencionar al usuario.\nUso: !promote @usuario',
@@ -287,7 +287,7 @@ export function registerAdminCommands(): void {
         usage: '!demote @usuario',
         adminOnly: true,
         execute: async (ctx: CommandContext) => {
-            const target = ctx.mentionedJids[0];
+            const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
                 await ctx.sock.sendMessage(ctx.groupJid, {
                     text: '⚠️ Debes mencionar al usuario.\nUso: !demote @usuario',
