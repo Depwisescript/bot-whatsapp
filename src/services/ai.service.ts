@@ -114,7 +114,8 @@ const downloadYoutubeTool: FunctionDeclaration = {
         type: SchemaType.OBJECT,
         properties: {
             query: { type: SchemaType.STRING, description: 'Término de búsqueda o URL de YouTube.' },
-            type: { type: SchemaType.STRING, description: 'Tipo de descarga: "audio" o "video".' }
+            type: { type: SchemaType.STRING, description: 'Tipo de descarga: "audio" o "video".' },
+            as_document: { type: SchemaType.BOOLEAN, description: 'Si es true, se enviará como archivo/documento en lugar de nota de voz/video normal. Úsalo SI EL USUARIO PIDE EXPLÍCITAMENTE un archivo o documento.' }
         },
         required: ['query', 'type']
     }
@@ -356,12 +357,13 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                                     const dl = isAudio ? await downloadAudio(result.url, result.title) : await downloadVideo(result.url, result.title);
                                     
                                     try {
-                                        if (dl.sizeMB > 50) {
+                                        const sendAsDocument = callArgs.as_document === true || dl.sizeMB > 50;
+                                        if (sendAsDocument) {
                                             await options.sock.sendMessage(options.jid, {
                                                 document: { url: dl.filePath },
                                                 mimetype: isAudio ? 'audio/mpeg' : 'video/mp4',
                                                 fileName: `${result.title}.${isAudio ? 'mp3' : 'mp4'}`,
-                                                caption: `🎧 *${result.title}* (${result.duration})\nCanal: ${result.author}\n_Enviado como documento por su gran tamaño._`
+                                                caption: `🎧 *${result.title}* (${result.duration})\nCanal: ${result.author}` + (dl.sizeMB > 50 ? '\n_Enviado como documento por su gran tamaño._' : '')
                                             });
                                         } else {
                                             if (isAudio) {
