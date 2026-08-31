@@ -678,7 +678,7 @@ export function registerExtraCommands(): void {
     // ── !decrypt / !revelar / !unconfig ─────────────────────────
     const executeDecrypt = async (ctx: CommandContext) => {
         if (!globalDecryptEnabled) {
-            await ctx.sock.sendMessage(ctx.jid, { text: '❌ La función de desencriptación de VPN ha sido desactivada temporalmente por el Creador.' }, { quoted: ctx.message });
+            await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ La función de desencriptación de VPN ha sido desactivada temporalmente por el Creador.' });
             return;
         }
         const argText = ctx.args.join(' ').trim();
