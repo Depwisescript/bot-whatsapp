@@ -39,7 +39,7 @@ const generateImageTool: FunctionDeclaration = {
 
 const runTerminalCommandTool: FunctionDeclaration = {
     name: 'run_terminal_command',
-    description: 'Ejecuta un comando en la terminal de la VPS Linux. Usa esto SOLO si el usuario administrador te pide instalar algo, buscar archivos, o realizar operaciones de sistema. Cuidado con comandos destructivos.',
+    description: 'Ejecuta un comando en la terminal de la VPS Linux. Usa esto SOLO si el usuario administrador te pide instalar algo, buscar archivos, o realizar operaciones de sistema. PROHIBIDO usarlo para buscar o descargar APKs.',
     parameters: {
         type: SchemaType.OBJECT,
         properties: {
