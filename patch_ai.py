@@ -1,32 +1,67 @@
 import re
 
-file_ts = 'src/services/ai.service.ts'
-with open(file_ts, 'r', encoding='utf-8') as f:
-    code = f.read()
+with open("src/services/ai.service.ts", "r") as f:
+    text = f.read()
 
-# Fix ai.service.ts return value on tool failure
-old_code = """                    // Si la herramienta ya envió el archivo o mensaje, no necesitamos que la IA responda más.
-                    if (call.name === 'send_file_to_whatsapp' || call.name === 'download_youtube_media') {
-                        if (options?.jid && options?.sender) {
-                            chatSessions.delete(`${options.jid}_${options.sender}`);
-                        }
-                        return '¡Listo! ✅'; // El bot enviará este mensaje confirmando la acción
-                    }"""
+# Add the tool declaration
+new_tool = """const toggleFeatureTool: FunctionDeclaration = {
+    name: 'toggle_feature',
+    description: 'Activa o desactiva características globales del bot.',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            feature: {
+                type: Type.STRING,
+                description: 'Nombre de la característica (ej: "decrypt")'
+            },
+            enabled: {
+                type: Type.BOOLEAN,
+                description: 'true para activar, false para desactivar'
+            }
+        },
+        required: ['feature', 'enabled']
+    }
+};
 
-new_code = """                    // Si la herramienta ya envió el archivo o mensaje, no necesitamos que la IA responda más.
-                    if (call.name === 'send_file_to_whatsapp' || call.name === 'download_youtube_media') {
-                        if (options?.jid && options?.sender) {
-                            chatSessions.delete(`${options.jid}_${options.sender}`);
-                        }
-                        if (functionResponse && !functionResponse.success) {
-                            return `❌ ${functionResponse.error || 'Hubo un error al procesar tu solicitud.'}`;
-                        }
-                        return '¡Listo! ✅'; // El bot enviará este mensaje confirmando la acción
-                    }"""
+const executeInternalCommandTool"""
 
-code = code.replace(old_code, new_code)
+text = text.replace("const executeInternalCommandTool", new_tool)
 
-with open(file_ts, 'w', encoding='utf-8') as f:
-    f.write(code)
+# Add to the functionDeclarations array
+text = text.replace("[generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, executeInternalCommandTool]", "[generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, executeInternalCommandTool, toggleFeatureTool]")
 
-print("AI patched!")
+
+# Add the execution logic inside the switch
+tool_exec = """                        } else if (call.name === 'execute_internal_command') {
+"""
+
+new_tool_exec = """                        } else if (call.name === 'toggle_feature') {
+                            const { feature, enabled } = callArgs;
+                            if (!options?.isOwner) {
+                                functionResponse = { success: false, error: 'PERMISSION DENIED. Only the Owner (Depwise) can toggle features.' };
+                            } else {
+                                if (feature.toLowerCase() === 'decrypt') {
+                                    const { setDecryptEnabled } = require('../connection');
+                                    setDecryptEnabled(enabled);
+                                    functionResponse = { success: true, message: `La función ${feature} ahora está ${enabled ? 'ACTIVADA' : 'DESACTIVADA'}.` };
+                                } else {
+                                    functionResponse = { success: false, error: `Feature ${feature} not found.` };
+                                }
+                            }
+                        } else if (call.name === 'execute_internal_command') {"""
+
+text = text.replace(tool_exec, new_tool_exec)
+
+# Make sure it knows it can use it in SYSTEM_INSTRUCTION
+sys_ins = """* Tienes acceso a herramientas avanzadas:
+1. \`generate_image\`: Crea imágenes.
+"""
+
+new_sys_ins = """* Tienes acceso a herramientas avanzadas:
+1. \`toggle_feature\`: Usa esto SI EL DUEÑO TE PIDE desactivar o activar funciones como 'decrypt'. NO uses run_terminal_command para esto.
+2. \`generate_image\`: Crea imágenes.
+"""
+text = text.replace(sys_ins, new_sys_ins)
+
+with open("src/services/ai.service.ts", "w") as f:
+    f.write(text)

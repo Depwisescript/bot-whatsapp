@@ -46,6 +46,25 @@ const runTerminalCommandTool: FunctionDeclaration = {
     }
 };
 
+const toggleFeatureTool: FunctionDeclaration = {
+    name: 'toggle_feature',
+    description: 'Activa o desactiva características globales del bot.',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            feature: {
+                type: Type.STRING,
+                description: 'Nombre de la característica (ej: "decrypt")'
+            },
+            enabled: {
+                type: Type.BOOLEAN,
+                description: 'true para activar, false para desactivar'
+            }
+        },
+        required: ['feature', 'enabled']
+    }
+};
+
 const executeInternalCommandTool: FunctionDeclaration = {
     name: 'execute_internal_command',
     description: 'Ejecuta un comando nativo del bot (ej: ban, mute, promote, tagall, etc.).',
@@ -105,7 +124,7 @@ const geminiModel = genAI?.getGenerativeModel({
     systemInstruction: SYSTEM_INSTRUCTION,
     tools: [
         {
-            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, executeInternalCommandTool]
+            functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, executeInternalCommandTool, toggleFeatureTool]
         }
     ]
 });
@@ -161,7 +180,7 @@ function getGeminiModel(apiKey: string) {
         systemInstruction: SYSTEM_INSTRUCTION,
         tools: [
             {
-                functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, executeInternalCommandTool]
+                functionDeclarations: [generateImageTool, runTerminalCommandTool, readFileTool, sendFileTool, downloadYoutubeTool, executeInternalCommandTool, toggleFeatureTool]
             }
         ]
     });

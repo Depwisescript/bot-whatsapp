@@ -7,6 +7,7 @@ import {
     getWarningCount,
 } from '../services/db.service';
 import { config } from '../config';
+import { globalDecryptEnabled } from '../connection';
 
 // ── Level title mapping ──────────────────────────────────────────
 function getLevelTitle(level: number): string {
@@ -676,6 +677,10 @@ export function registerExtraCommands(): void {
 
     // ── !decrypt / !revelar / !unconfig ─────────────────────────
     const executeDecrypt = async (ctx: CommandContext) => {
+        if (!globalDecryptEnabled) {
+            await ctx.sock.sendMessage(ctx.jid, { text: '❌ La función de desencriptación de VPN ha sido desactivada temporalmente por el Creador.' }, { quoted: ctx.message });
+            return;
+        }
         const argText = ctx.args.join(' ').trim();
         const docMsg = ctx.message.message?.documentMessage || ctx.quotedMessage?.documentMessage;
         
