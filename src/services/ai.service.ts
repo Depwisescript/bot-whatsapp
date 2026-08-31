@@ -407,12 +407,7 @@ export async function generateAIResponse(prompt: string, context?: string, optio
 
                 } catch (toolErr: any) {
                     console.error('[AI TOOL ERROR]', toolErr);
-                    result = await chat.sendMessage([{
-                        functionResponse: {
-                            name: call.name,
-                            response: { success: false, error: toolErr.message }
-                        }
-                    }]);
+                    result = await chat.sendMessage(`[System/Tool Execution Error - ${call.name}]:\n${toolErr.message}`);
                     responseText = result.response.text();
                 }
             }
