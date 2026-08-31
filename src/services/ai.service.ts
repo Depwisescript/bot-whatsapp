@@ -348,6 +348,7 @@ Canal: ${result.author}`
                             }
                         }
 
+                        try {
                         result = await chat.sendMessage([{
                             functionResponse: {
                                 name: call.name,
@@ -369,7 +370,8 @@ Canal: ${result.author}`
 
                 } catch (toolErr: any) {
                     console.error('[AI TOOL ERROR]', toolErr);
-                    result = await chat.sendMessage([{
+                    try {
+                        result = await chat.sendMessage([{
                         functionResponse: {
                             name: call.name,
                             response: { success: false, error: toolErr.message }
