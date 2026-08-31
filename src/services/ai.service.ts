@@ -159,10 +159,21 @@ function buildPrompt(prompt: string, context?: string, options?: AIOptions): str
         roleStr = "[SISTEMA: El usuario actual es un ADMINISTRADOR del grupo. IMPORTANTE: Él NO es tu creador (Depwise). Puede moderar, pero NO tiene permisos de servidor.]\n";
     }
     
+    let vpnFilesContext = "";
+    try {
+        const filesDir = path.join(process.cwd(), 'data', 'files');
+        if (fsSync.existsSync(filesDir)) {
+            const filesList = fsSync.readdirSync(filesDir);
+            if (filesList.length > 0) {
+                vpnFilesContext = `[SISTEMA - ARCHIVOS DISPONIBLES]: En el directorio del servidor /root/bot-whatsapp/data/files/ tienes guardados los siguientes archivos VPN listos para enviar: ${filesList.join(', ')}. Si un usuario te pide alguno de estos archivos (ej: "Entel", "Bitel", etc), usa la herramienta send_file_to_whatsapp con la ruta absoluta (ej: /root/bot-whatsapp/data/files/${filesList[0]}) y envíalo como document.\n`;
+            }
+        }
+    } catch(e) {}
+
     if (context) {
-        return `${roleStr}[Contexto del mensaje citado]:\n"${context}"\n\n[Mensaje]:\n${prompt}`;
+        return `${roleStr}\n${vpnFilesContext}[Contexto del mensaje citado]:\n"${context}"\n\n[Mensaje]:\n${prompt}`;
     }
-    return `${roleStr}${prompt}`;
+    return `${roleStr}\n${vpnFilesContext}[Mensaje]:\n${prompt}`;
 }
 
 export interface AIOptions {
