@@ -19,7 +19,7 @@ Si te piden una imagen, DEBES usar la herramienta generate_and_send_image. NO di
 Si el creador (admin) te pide ejecutar un comando de terminal, usa la herramienta run_terminal_command.
     Tienes acceso a la herramienta 'execute_internal_command'. Úsala para ejecutar CUALQUIERA de estos comandos del sistema en nombre del usuario, pasándole el nombre del comando y los argumentos estrictamente necesarios:\n    - add (añadir al grupo), ban (expulsar y banear), mute (silenciar, args: ['30m']), unmute, warn (advertir, args: ['razón']), warnings, resetwarn, promote, demote, unban, del (borrar mensaje citado)\n    - antinsfw, autoapprove, setwelcome, setbye, slowmode\n    - tagall (mencionar a todos), link, rules, level, top, perfil, remind, poll, clima, traducir\n    - decrypt, revelar, unconfig, sticker, play, video\n    \n    CRÍTICO PARA COMANDOS: No pases el @usuario en el array 'args', el sistema lo deduce automáticamente si el usuario cita un mensaje, o usa 'target_phone'.\n    Ejemplo 1: Si el usuario cita un mensaje y dice 'Jarvis, silencia por 2 minutos', tú llamas a execute_internal_command con command='mute', target_phone='' y args=['2m'].\n    Ejemplo 2: Si dicen 'advierte por spam', usas command='warn' y args=['spam'].\n    Ejemplo 3: Si dicen 'haz a @12345 admin', usas command='promote' y target_phone='12345'.\n    Ejemplo 4: Si dicen 'activa la bienvenida', usas command='setwelcome' y args=['on'].\nSi te piden activar o desactivar decrypt, usa la herramienta toggle_feature.
 Si te piden leer un archivo, usa read_file.
-Si te piden descargar o enviar un video/audio de internet o YouTube, usa DE INMEDIATO la herramienta download_youtube_media. NO digas que lo vas a hacer sin llamar a la herramienta. Llama a la herramienta y el sistema lo enviará automáticamente.`;
+Si te piden descargar o enviar un video/audio de internet o YouTube, usa DE INMEDIATO la herramienta download_youtube_media. NO digas que lo vas a hacer sin llamar a la herramienta. Llama a la herramienta y el sistema lo enviará automáticamente.\nSi te piden descargar una aplicación o APK, usa la herramienta download_apk_from_aptoide.`;
 
 // ── Gemini (primary provider) ────────────────────────────────────
 const genAI = config.geminiApiKeys.length > 0 ? new GoogleGenerativeAI(config.geminiApiKeys[0]) : null;
@@ -106,6 +106,18 @@ const sendFileTool: FunctionDeclaration = {
             caption: { type: SchemaType.STRING, description: 'Texto que acompaña al archivo (opcional).' }
         },
         required: ['filepath', 'type']
+    }
+};
+
+const downloadApkTool: FunctionDeclaration = {
+    name: 'download_apk_from_aptoide',
+    description: 'Busca y descarga el archivo .apk de una aplicación desde Aptoide y lo envía por WhatsApp. Límite: 200MB. Úsalo cuando el usuario pida descargar una APK o aplicación que no está en el servidor local.',
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            query: { type: SchemaType.STRING, description: 'Nombre de la aplicación a descargar.' }
+        },
+        required: ['query']
     }
 };
 
@@ -358,6 +370,40 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                             functionResponse = { success: false, error: 'Socket connection not available.' };
                         }
                     }
+                    else if (call.name === 'download_apk_from_aptoide') {
+                        if (options?.sock && options?.jid) {
+                            let filePath = '';
+                            try {
+                                const { searchAndDownloadApk, deleteTempApk } = require('./apk.service');
+                                await options.sock.sendMessage(options.jid, { text: `🔍 Buscando y descargando *${callArgs.query}* desde Aptoide...` });
+                                
+                                const result = await searchAndDownloadApk(callArgs.query as string);
+                                filePath = result.filePath;
+                                
+                                await options.sock.sendMessage(options.jid, { text: `✅ APK encontrada: *${result.title}* (${result.sizeMB.toFixed(2)} MB). Enviando...` });
+                                
+                                const fileBuffer = require('fs').readFileSync(filePath);
+                                await options.sock.sendMessage(options.jid, {
+                                    document: fileBuffer,
+                                    mimetype: 'application/vnd.android.package-archive',
+                                    fileName: `${result.title}.apk`,
+                                    caption: `Aquí tienes tu APK descargada desde Aptoide. 📦✨`
+                                });
+                                
+                                functionResponse = { success: true };
+                            } catch (error: any) {
+                                console.error('Error in download_apk_from_aptoide:', error);
+                                functionResponse = { success: false, error: error.message };
+                                await options.sock.sendMessage(options.jid, { text: `❌ Hubo un error al descargar la APK: ${error.message}` });
+                            } finally {
+                                if (filePath) {
+                                    require('./apk.service').deleteTempApk(filePath);
+                                }
+                            }
+                        } else {
+                            functionResponse = { success: false, error: 'Socket no disponible.' };
+                        }
+                    }
                     else if (call.name === 'download_youtube_media') {
                         if (options?.sock && options?.jid) {
                             try {
@@ -412,7 +458,7 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                     }
 
                     // Si la herramienta ya envió el archivo o mensaje, no necesitamos que la IA responda más.
-                    if (call.name === 'send_file_to_whatsapp' || call.name === 'download_youtube_media') {
+                    if (call.name === 'send_file_to_whatsapp' || call.name === 'download_youtube_media' || call.name === 'download_apk_from_aptoide') {
                         if (options?.jid && options?.sender) {
                             chatSessions.delete(`${options.jid}_${options.sender}`);
                         }
