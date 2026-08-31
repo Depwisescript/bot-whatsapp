@@ -26,9 +26,9 @@ const generateImageTool: FunctionDeclaration = {
     name: 'generate_and_send_image',
     description: 'Genera una imagen usando IA basada en el prompt y la envía automáticamente al chat de WhatsApp. USAR ESTA HERRAMIENTA CADA VEZ QUE EL USUARIO PIDA UNA IMAGEN, FOTO O DIBUJO.',
     parameters: {
-        type: Schema'OBJECT',
+        type: SchemaType.OBJECT,
         properties: {
-            prompt: { type: Schema'STRING', description: 'Descripción detallada en inglés de la imagen a generar.' }
+            prompt: { type: SchemaType.STRING, description: 'Descripción detallada en inglés de la imagen a generar.' }
         },
         required: ['prompt']
     }
@@ -38,9 +38,9 @@ const runTerminalCommandTool: FunctionDeclaration = {
     name: 'run_terminal_command',
     description: 'Ejecuta un comando en la terminal de la VPS Linux. Usa esto SOLO si el usuario administrador te pide instalar algo, buscar archivos, o realizar operaciones de sistema. Cuidado con comandos destructivos.',
     parameters: {
-        type: Schema'OBJECT',
+        type: SchemaType.OBJECT,
         properties: {
-            command: { type: Schema'STRING', description: 'El comando bash a ejecutar.' }
+            command: { type: SchemaType.STRING, description: 'El comando bash a ejecutar.' }
         },
         required: ['command']
     }
@@ -50,14 +50,14 @@ const toggleFeatureTool: FunctionDeclaration = {
     name: 'toggle_feature',
     description: 'Activa o desactiva características globales del bot.',
     parameters: {
-        type: 'OBJECT',
+        type: SchemaType.OBJECT,
         properties: {
             feature: {
-                type: 'STRING',
+                type: SchemaType.STRING,
                 description: 'Nombre de la característica (ej: "decrypt")'
             },
             enabled: {
-                type: 'BOOLEAN',
+                type: SchemaType.BOOLEAN,
                 description: 'true para activar, false para desactivar'
             }
         },
@@ -69,11 +69,11 @@ const executeInternalCommandTool: FunctionDeclaration = {
     name: 'execute_internal_command',
     description: 'Ejecuta un comando nativo del bot (ej: ban, mute, promote, tagall, etc.).',
     parameters: {
-        type: Schema'OBJECT',
+        type: SchemaType.OBJECT,
         properties: {
-            command: { type: Schema'STRING', description: 'Nombre del comando (sin prefijo)' },
-            args: { type: SchemaType.ARRAY, items: { type: Schema'STRING' }, description: 'Argumentos del comando (ej: numero de telefono, texto)' },
-            target_phone: { type: Schema'STRING', description: 'Opcional: Si el comando requiere mencionar a un usuario (ej: ban, promote), pon su número de teléfono aquí (ej: 51987654321)' }
+            command: { type: SchemaType.STRING, description: 'Nombre del comando (sin prefijo)' },
+            args: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: 'Argumentos del comando (ej: numero de telefono, texto)' },
+            target_phone: { type: SchemaType.STRING, description: 'Opcional: Si el comando requiere mencionar a un usuario (ej: ban, promote), pon su número de teléfono aquí (ej: 51987654321)' }
         },
         required: ['command']
     }
@@ -84,9 +84,9 @@ const readFileTool: FunctionDeclaration = {
     name: 'read_file',
     description: 'Lee el contenido de un archivo en la VPS.',
     parameters: {
-        type: Schema'OBJECT',
+        type: SchemaType.OBJECT,
         properties: {
-            filepath: { type: Schema'STRING', description: 'Ruta absoluta del archivo a leer.' }
+            filepath: { type: SchemaType.STRING, description: 'Ruta absoluta del archivo a leer.' }
         },
         required: ['filepath']
     }
@@ -96,11 +96,11 @@ const sendFileTool: FunctionDeclaration = {
     name: 'send_file_to_whatsapp',
     description: 'Envía un archivo local (imagen, video o documento) desde la VPS al chat de WhatsApp actual. Útil si acabas de descargar algo con la terminal.',
     parameters: {
-        type: Schema'OBJECT',
+        type: SchemaType.OBJECT,
         properties: {
-            filepath: { type: Schema'STRING', description: 'Ruta absoluta del archivo local a enviar.' },
-            type: { type: Schema'STRING', description: 'Tipo de archivo: "image", "video", o "document".' },
-            caption: { type: Schema'STRING', description: 'Texto que acompaña al archivo (opcional).' }
+            filepath: { type: SchemaType.STRING, description: 'Ruta absoluta del archivo local a enviar.' },
+            type: { type: SchemaType.STRING, description: 'Tipo de archivo: "image", "video", o "document".' },
+            caption: { type: SchemaType.STRING, description: 'Texto que acompaña al archivo (opcional).' }
         },
         required: ['filepath', 'type']
     }
@@ -110,10 +110,10 @@ const downloadYoutubeTool: FunctionDeclaration = {
     name: 'download_youtube_media',
     description: 'Descarga un video o audio de YouTube y lo envía automáticamente al chat de WhatsApp. Úsalo CADA VEZ que el usuario pida música, canciones o videos de internet.',
     parameters: {
-        type: Schema'OBJECT',
+        type: SchemaType.OBJECT,
         properties: {
-            query: { type: Schema'STRING', description: 'Término de búsqueda o URL de YouTube.' },
-            type: { type: Schema'STRING', description: 'Tipo de descarga: "audio" o "video".' }
+            query: { type: SchemaType.STRING, description: 'Término de búsqueda o URL de YouTube.' },
+            type: { type: SchemaType.STRING, description: 'Tipo de descarga: "audio" o "video".' }
         },
         required: ['query', 'type']
     }
