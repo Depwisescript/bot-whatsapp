@@ -3,6 +3,8 @@ import { config } from '../config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
+import fsSync from 'fs';
+import path from 'path';
 import { getGroupSettings, setWelcomeMsg } from './db.service';
 import { getCommand } from '../commands';
 
