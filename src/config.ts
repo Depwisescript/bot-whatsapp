@@ -12,6 +12,7 @@ export const config = {
 
     /** Gemini API Key for answering queries */
     geminiApiKey: process.env.GEMINI_API_KEY || '',
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
 
     /** Custom API Key (OpenAI, Groq, DeepSeek, etc) */
     openAiApiKey: process.env.OPENAI_API_KEY || '',

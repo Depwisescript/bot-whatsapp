@@ -101,7 +101,7 @@ const downloadYoutubeTool: FunctionDeclaration = {
 };
 
 const geminiModel = genAI?.getGenerativeModel({
-    model: 'gemini-3.5-flash-lite',
+    model: config.geminiModel,
     systemInstruction: SYSTEM_INSTRUCTION,
     tools: [
         {
