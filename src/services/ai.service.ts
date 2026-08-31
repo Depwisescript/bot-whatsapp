@@ -344,6 +344,9 @@ export async function generateAIResponse(prompt: string, context?: string, optio
                                 if (fileType === 'document') {
                                     const pathLib = require('path');
                                     sendPayload.fileName = pathLib.basename(callArgs.filepath as string);
+                                    if (!callArgs.mimetype) {
+                                        sendPayload.mimetype = 'application/octet-stream';
+                                    }
                                 }
 
                                 await options.sock.sendMessage(options.jid, sendPayload);
