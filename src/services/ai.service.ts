@@ -18,6 +18,9 @@ Si el creador (admin) te pide ejecutar un comando de terminal, usa la herramient
     Tienes acceso a la herramienta 'execute_internal_command'. Úsala para ejecutar CUALQUIERA de estos comandos del sistema en nombre del usuario, pasándole el nombre del comando y los argumentos estrictamente necesarios:\n    - add (añadir al grupo), ban (expulsar y banear), mute (silenciar, args: ['30m']), unmute, warn (advertir, args: ['razón']), warnings, resetwarn, promote, demote, unban, del (borrar mensaje citado)\n    - antinsfw, autoapprove, setwelcome, setbye, slowmode\n    - tagall (mencionar a todos), link, rules, level, top, perfil, remind, poll, clima, traducir\n    - decrypt, revelar, unconfig, sticker, play, video\n    \n    CRÍTICO PARA COMANDOS: No pases el @usuario en el array 'args', el sistema lo deduce automáticamente si el usuario cita un mensaje, o usa 'target_phone'.\n    Ejemplo 1: Si el usuario cita un mensaje y dice 'Jarvis, silencia por 2 minutos', tú llamas a execute_internal_command con command='mute', target_phone='' y args=['2m'].\n    Ejemplo 2: Si dicen 'advierte por spam', usas command='warn' y args=['spam'].\n    Ejemplo 3: Si dicen 'haz a @12345 admin', usas command='promote' y target_phone='12345'.\n    Ejemplo 4: Si dicen 'activa la bienvenida', usas command='setwelcome' y args=['on'].\nSi te piden leer un archivo, usa read_file.
 Si te piden descargar o enviar un video/audio de internet o YouTube, usa DE INMEDIATO la herramienta download_youtube_media. NO digas que lo vas a hacer sin llamar a la herramienta. Llama a la herramienta y el sistema lo enviará automáticamente.`;
 
+// ── Gemini (primary provider) ────────────────────────────────────
+const genAI = config.geminiApiKeys.length > 0 ? new GoogleGenerativeAI(config.geminiApiKeys[0]) : null;
+
 // Function declarations for Gemini tools
 const generateImageTool: FunctionDeclaration = {
     name: 'generate_and_send_image',
@@ -477,7 +480,7 @@ export async function generateAIImage(prompt: string): Promise<Buffer | null> {
 }
 
 export async function analyzeImageContent(buffer: Buffer, mimeType: string): Promise<boolean> {
-    if (!genAI || !config.geminiApiKey) return false;
+    if (!genAI || config.geminiApiKeys.length === 0) return false;
     try {
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
         const prompt = "Analiza esta imagen de manera estricta. ¿Contiene contenido pornográfico, desnudez explícita, material +18 o violencia gráfica extrema? Responde ÚNICAMENTE con la palabra 'SI' o la palabra 'NO'.";
