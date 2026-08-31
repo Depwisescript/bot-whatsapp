@@ -47,6 +47,7 @@ db.exec(`
     anti_nsfw INTEGER DEFAULT 0,
     levels_enabled INTEGER DEFAULT 1,
     auto_approve INTEGER DEFAULT 0,
+    allow_decrypt INTEGER DEFAULT 1,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -291,6 +292,7 @@ export interface GroupSettings {
     anti_nsfw: number;
     levels_enabled: number;
     auto_approve: number;
+    allow_decrypt: number;
 }
 
 export function getGroupSettings(groupJid: string): GroupSettings {

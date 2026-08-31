@@ -8,6 +8,7 @@ import {
 } from '../services/db.service';
 import { config } from '../config';
 import { globalDecryptEnabled } from '../connection';
+import { getGroupSettings } from '../services/db.service';
 
 // ── Level title mapping ──────────────────────────────────────────
 function getLevelTitle(level: number): string {
@@ -677,8 +678,13 @@ export function registerExtraCommands(): void {
 
     // ── !decrypt / !revelar / !unconfig ─────────────────────────
     const executeDecrypt = async (ctx: CommandContext) => {
+        const groupSettings = getGroupSettings(ctx.groupJid);
         if (!globalDecryptEnabled) {
-            await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ La función de desencriptación de VPN ha sido desactivada temporalmente por el Creador.' });
+            await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ La función de desencriptación de VPN ha sido desactivada temporalmente a nivel global por el Creador (Depwise).' });
+            return;
+        }
+        if (groupSettings && groupSettings.allow_decrypt === 0) {
+            await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ La función de desencriptación de VPN ha sido desactivada en este grupo por el Administrador Supremo del grupo.' });
             return;
         }
         const argText = ctx.args.join(' ').trim();
