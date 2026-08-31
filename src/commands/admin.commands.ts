@@ -8,7 +8,7 @@ export function registerAdminCommands(): void {
         name: 'kick',
         description: 'Expulsar un miembro del grupo',
         usage: '!kick @usuario',
-        adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
@@ -69,7 +69,7 @@ export function registerAdminCommands(): void {
         name: 'ban',
         description: 'Expulsar y banear permanentemente a un miembro',
         usage: '!ban @usuario',
-        adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
@@ -124,7 +124,7 @@ export function registerAdminCommands(): void {
         name: 'mute',
         description: 'Silenciar a un usuario temporalmente',
         usage: '!mute @usuario 30m (m=minutos, h=horas)',
-        adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             // AI sends args=['2m'], normal usage sends args=['@123', '2m']
@@ -166,7 +166,7 @@ export function registerAdminCommands(): void {
         name: 'unmute',
         description: 'Quitar silencio a un usuario',
         usage: '!unmute @usuario',
-        adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
@@ -189,7 +189,7 @@ export function registerAdminCommands(): void {
         name: 'warn',
         description: 'Dar una advertencia a un miembro',
         usage: '!warn @usuario [razón]',
-        adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
@@ -266,7 +266,7 @@ export function registerAdminCommands(): void {
         name: 'resetwarn',
         description: 'Resetear las advertencias de un usuario',
         usage: '!resetwarn @usuario',
-        adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
@@ -289,7 +289,7 @@ export function registerAdminCommands(): void {
         name: 'promote',
         description: 'Promover a un miembro a admin',
         usage: '!promote @usuario',
-        adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
@@ -318,7 +318,7 @@ export function registerAdminCommands(): void {
         name: 'demote',
         description: 'Quitar admin a un miembro',
         usage: '!demote @usuario',
-        adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             const target = ctx.mentionedJids[0] || ctx.quotedParticipant;
             if (!target) {
@@ -346,7 +346,7 @@ export function registerAdminCommands(): void {
         name: 'unban',
         description: 'Quitar el ban permanente a un miembro',
         usage: '!unban @usuario o !unban número (ej: 54911...)',
-        adminOnly: true,
+        superAdminOnly: true,
         execute: async (ctx: CommandContext) => {
             let target = ctx.mentionedJids[0];
 
