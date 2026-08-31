@@ -165,7 +165,7 @@ function buildPrompt(prompt: string, context?: string, options?: AIOptions): str
         if (fsSync.existsSync(filesDir)) {
             const filesList = fsSync.readdirSync(filesDir);
             if (filesList.length > 0) {
-                vpnFilesContext = `[SISTEMA - ARCHIVOS DISPONIBLES]: En el directorio del servidor /root/bot-whatsapp/data/files/ tienes guardados los siguientes archivos VPN listos para enviar: ${filesList.join(', ')}. Si un usuario te pide alguno de estos archivos (ej: "Entel", "Bitel", etc), usa la herramienta send_file_to_whatsapp con la ruta absoluta (ej: /root/bot-whatsapp/data/files/${filesList[0]}) y envíalo como document.\n`;
+                vpnFilesContext = `[SISTEMA - ARCHIVOS DISPONIBLES]: En el servidor tienes los siguientes archivos: ${filesList.join(', ')}. Si un usuario te pide alguno de estos archivos (ej: "http injector", "Entel"), DEBES llamar OBLIGATORIAMENTE a la herramienta send_file_to_whatsapp con filepath="/root/bot-whatsapp/data/files/<nombre_del_archivo>". CRÍTICO: NO DIGAS "AQUÍ TIENES EL ARCHIVO" SIN LLAMAR A LA HERRAMIENTA. TIENES QUE USAR LA HERRAMIENTA SÍ O SÍ.\n`;
             }
         }
     } catch(e) {}
