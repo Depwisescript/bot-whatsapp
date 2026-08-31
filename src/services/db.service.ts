@@ -297,7 +297,7 @@ export interface GroupSettings {
 
 export function getGroupSettings(groupJid: string): GroupSettings {
     const row = stmtGetGroupSettings.get(groupJid) as GroupSettings | undefined;
-    return row || { group_jid: groupJid, welcome_msg: null, bye_msg: null, slowmode_seconds: 0, anti_nsfw: 0, levels_enabled: 1, auto_approve: 0 };
+    return row || { group_jid: groupJid, welcome_msg: null, bye_msg: null, slowmode_seconds: 0, anti_nsfw: 0, levels_enabled: 1, auto_approve: 0, allow_decrypt: 1 };
 }
 
 export function setWelcomeMsg(groupJid: string, msg: string | null): void {

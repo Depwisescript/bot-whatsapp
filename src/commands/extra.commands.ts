@@ -8,7 +8,6 @@ import {
 } from '../services/db.service';
 import { config } from '../config';
 import { globalDecryptEnabled } from '../connection';
-import { getGroupSettings } from '../services/db.service';
 
 // ── Level title mapping ──────────────────────────────────────────
 function getLevelTitle(level: number): string {
