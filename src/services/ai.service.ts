@@ -386,12 +386,7 @@ export async function generateAIResponse(prompt: string, context?: string, optio
 
                     // Send the function response back to Gemini to get the final text
                     try {
-                        result = await chat.sendMessage([{
-                            functionResponse: {
-                                name: call.name,
-                                response: functionResponse
-                            }
-                        }]);
+                        result = await chat.sendMessage(`[System/Tool Execution Result - ${call.name}]:\n${JSON.stringify(functionResponse)}`);
                         responseText = result.response.text();
                     } catch (sendMessageErr: any) {
                         // Ignorar errores de "Role function is not supported" si ya se cumplió el objetivo
