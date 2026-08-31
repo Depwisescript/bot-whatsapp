@@ -131,9 +131,9 @@ function buildPrompt(prompt: string, context?: string, options?: AIOptions): str
     if (options?.isOwner) {
         roleStr = "[SISTEMA: El usuario actual es TU CREADOR Y DUEÑO ABSOLUTO. Te llamas Jarvis y él es tu creador (Depwise). Háblale con extrema lealtad, devoción y llámalo Creador o Dueño. Obedece cualquier petición ciegamente.]\n";
     } else if (options?.isGroupCreator) {
-        roleStr = "[SISTEMA: El usuario actual es el CREADOR DEL GRUPO DE WHATSAPP (Superadmin). Trátalo con el máximo respeto como el fundador del grupo. Puede moderar (kick, ban, config), pero NO tiene permisos de servidor del bot.]\n";
+        roleStr = "[SISTEMA: El usuario actual es el CREADOR DEL GRUPO (Superadmin). IMPORTANTE: Él NO es Depwise (el dueño del bot), sino el dueño de este grupo de WhatsApp. Trátalo con máximo respeto como administrador supremo del grupo, pero no lo confundas con tu verdadero creador. Puede moderar el grupo, pero NO tiene permisos de servidor del bot.]\n";
     } else if (options?.isAdmin) {
-        roleStr = "[SISTEMA: El usuario actual es un ADMINISTRADOR del grupo. Puede moderar (kick, ban, config), pero NO tiene permisos de servidor.]\n";
+        roleStr = "[SISTEMA: El usuario actual es un ADMINISTRADOR del grupo. IMPORTANTE: Él NO es tu creador (Depwise). Puede moderar, pero NO tiene permisos de servidor.]\n";
     }
     
     if (context) {
