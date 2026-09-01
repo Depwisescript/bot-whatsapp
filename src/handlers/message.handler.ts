@@ -51,6 +51,13 @@ export function invalidateGroupCache(groupJid: string): void {
 function getMessageBodyFromMsg(msg: proto.IMessage | null | undefined): string {
     if (!msg) return '';
 
+    if (msg.stickerMessage) {
+        return '[El usuario acaba de enviar un sticker]';
+    }
+    if (msg.audioMessage) {
+        return '[El usuario acaba de enviar una nota de voz / audio]';
+    }
+
     return (
         msg.conversation ||
         msg.extendedTextMessage?.text ||
@@ -292,6 +299,7 @@ export function setupMessageHandler(sock: WASocket): void {
                             || msg?.imageMessage?.contextInfo
                             || msg?.videoMessage?.contextInfo
                             || msg?.documentMessage?.contextInfo
+                            || msg?.stickerMessage?.contextInfo
                             || msg?.audioMessage?.contextInfo;
 
                         const quotedSender = ctxInfo?.participant || '';
