@@ -62,7 +62,8 @@ export interface DownloadResult {
 /**
  * Searches YouTube and returns the best match
  */
-export async function searchYouTube(query: string): Promise<YouTubeSearchResult | null> {
+export async function searchYouTube(query: any): Promise<YouTubeSearchResult | null> {
+    if (typeof query !== 'string') query = JSON.stringify(query);
     try {
         const result = await ytSearch(query);
         const videos = result.videos;
