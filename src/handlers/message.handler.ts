@@ -1,6 +1,6 @@
 import { WASocket, proto, GroupMetadata, downloadMediaMessage } from '@whiskeysockets/baileys';
 import { config } from '../config';
-import { globalPaused, setPaused } from '../connection';
+import { globalPaused, setPaused, globalDevMode, setDevMode } from '../connection';
 import { getCommand, CommandContext } from '../commands/index';
 import { checkMessage, handleViolation } from './moderation.handler';
 import { isMuted, addUserXP, getGroupSettings, addAuditLog, saveContactName } from '../services/db.service';
@@ -157,10 +157,20 @@ export function setupMessageHandler(sock: WASocket): void {
                         setPaused(true);
                         await sock.sendMessage(remoteJid, { text: '🔴 ¡Jarvis ha sido APAGADO! Solo responderé cuando me enciendas con !on.' });
                         continue;
+                    } else if (tBody === '!devmode') {
+                        setDevMode(!globalDevMode);
+                        const devMsg = globalDevMode 
+                            ? '🛠️ *Modo Desarrollador ACTIVADO*. A partir de ahora solo le haré caso a mi creador.'
+                            : '✅ *Modo Desarrollador DESACTIVADO*. Vuelvo a escuchar a todos los usuarios.';
+                        await sock.sendMessage(remoteJid, { text: devMsg });
+                        continue;
                     }
                 }
 
                 if (globalPaused) continue; // Si está apagado, ignorar TODO lo demás.
+                
+                // Si el modo desarrollador está activo, ignorar mensajes de cualquiera que no sea el creador
+                if (globalDevMode && !isOwnerTemp) continue;
 
                 // Extract message body early to ignore background/protocol messages
                 

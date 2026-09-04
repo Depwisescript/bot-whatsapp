@@ -51,12 +51,20 @@ function startReminderWorker(sock: any) {
 export let globalQR = '';
 export let globalStatus = 'connecting'; // 'connecting', 'qr', 'connected', 'disconnected'
 export let globalSock: any = null;
-export let globalPaused = false;
 export let globalDecryptEnabled = true;
 export function setDecryptEnabled(v: boolean) { globalDecryptEnabled = v; }
 export let globalForceOffline = false;
 export function setForceOffline(v: boolean) { globalForceOffline = v; }
+
+// ── Global Pause & Dev Mode State ────────────────────────────────
+export let globalPaused = false;
+export let globalDevMode = false;
+
+/**
+ * Update the global pause state (used by commands and admin panel)
+ */
 export function setPaused(v: boolean) { globalPaused = v; } // Exposed for panel interaction
+export function setDevMode(v: boolean) { globalDevMode = v; } // Exposed for panel interaction
 
 export async function startBot(): Promise<void> {
     const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
