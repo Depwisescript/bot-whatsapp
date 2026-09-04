@@ -394,7 +394,7 @@ export function setupMessageHandler(sock: WASocket): void {
                 
                 // --- SECCIÓN: DESHABILITAR COMANDOS MANUALES ---
                 // El dueño ordenó que TODOS los comandos deben pasar por Jarvis (IA).
-                if (commandName !== 'on' && commandName !== 'off') {
+                if (commandName !== 'on' && commandName !== 'off' && commandName !== 'devmode' && commandName !== 'album') {
                     if (command) {
                         await sock.sendMessage(groupJid, { 
                             text: `❌ *Los comandos manuales con prefijo (!) han sido deshabilitados de forma permanente.*
