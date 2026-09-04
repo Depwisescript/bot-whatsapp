@@ -175,9 +175,70 @@ export async function downloadVideo(url: string, title: string): Promise<Downloa
 export function deleteTempFile(filePath: string): void {
     try {
         if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+            const stat = fs.statSync(filePath);
+            if (stat.isDirectory()) {
+                fs.rmSync(filePath, { recursive: true, force: true });
+            } else {
+                fs.unlinkSync(filePath);
+            }
         }
     } catch (err) {
-        console.error(`Error deleting temp file ${filePath}:`, err);
+        console.error(`Error deleting temp file/dir ${filePath}:`, err);
     }
+}
+
+/**
+ * Downloads a playlist/album and zips it
+ */
+export async function downloadAlbumAsZip(url: string, albumName: string): Promise<DownloadResult> {
+    return downloadQueue.add(async () => {
+        const safeName = albumName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const albumDir = path.join(tempDir, `${safeName}_${Date.now()}`);
+        const zipFilePath = `${albumDir}.zip`;
+
+        try {
+            // Create a temp folder for the album
+            fs.mkdirSync(albumDir, { recursive: true });
+
+            // Run yt-dlp to download all tracks into the folder
+            const proxyUrl = process.env.YOUTUBE_PROXY !== undefined ? process.env.YOUTUBE_PROXY : "socks5://38.250.116.74:1080";
+            const proxyArg = (proxyUrl && proxyUrl.trim() !== '') ? `--proxy "${proxyUrl}"` : "";
+            
+            const command = `yt-dlp ${proxyArg} --yes-playlist --max-filesize 50M --extract-audio --audio-format mp3 --audio-quality 0 --no-warnings -o "${albumDir}/%(playlist_index)s - %(title)s.%(ext)s" "${url}"`;
+            await execAsync(command);
+
+            // Zip the folder
+            const archiver = require('archiver');
+            await new Promise<void>((resolve, reject) => {
+                const output = fs.createWriteStream(zipFilePath);
+                const archive = archiver('zip', { zlib: { level: 9 } });
+
+                output.on('close', () => resolve());
+                archive.on('error', (err: any) => reject(err));
+
+                archive.pipe(output);
+                archive.directory(albumDir, false); // Add folder contents to zip root
+                archive.finalize();
+            });
+
+            // Cleanup the folder
+            deleteTempFile(albumDir);
+
+            // Check zip file size
+            const stats = fs.statSync(zipFilePath);
+            const sizeMB = stats.size / (1024 * 1024);
+
+            return {
+                filePath: zipFilePath,
+                title: albumName,
+                sizeMB,
+                isLarge: sizeMB > 50
+            };
+        } catch (err: any) {
+            console.error('Error in downloadAlbumAsZip:', err.message || err);
+            deleteTempFile(albumDir);
+            deleteTempFile(zipFilePath);
+            throw err;
+        }
+    });
 }

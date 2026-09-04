@@ -617,6 +617,49 @@ export function registerExtraCommands(): void {
         },
     });
 
+    // ── !album ──────────────────────────────────────────────────
+    registerCommand({
+        name: 'album',
+        description: 'Descargar álbum o playlist completa (Solo Creador)',
+        usage: '!album [URL de YouTube Playlist]',
+        adminOnly: false,
+        execute: async (ctx: CommandContext) => {
+            // Solo el creador
+            if (!ctx.isOwner) {
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '⛔ Este comando exclusivo consume muchos recursos y solo puede ser usado por el Creador.' });
+                return;
+            }
+
+            const url = ctx.args[0];
+            if (!url || !url.includes('http')) {
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '⚠️ Uso: !album [URL válida de YouTube Playlist]' });
+                return;
+            }
+
+            await ctx.sock.sendMessage(ctx.groupJid, { text: `📦 Procesando y descargando el álbum completo...\nEste proceso puede tomar varios minutos, por favor ten paciencia.` });
+            
+            try {
+                const { downloadAlbumAsZip, deleteTempFile } = await import('../services/youtube.service');
+                const dl = await downloadAlbumAsZip(url, 'Album_o_Playlist');
+                
+                try {
+                    await ctx.sock.sendMessage(ctx.groupJid, {
+                        document: { url: dl.filePath },
+                        mimetype: 'application/zip',
+                        fileName: `Album.zip`,
+                        caption: `💿 Aquí tienes tu álbum comprimido.\n_Archivo temporal generado y borrado del servidor._`
+                    });
+                } finally {
+                    deleteTempFile(dl.filePath);
+                }
+                
+            } catch (err) {
+                console.error('Error in !album:', err);
+                await ctx.sock.sendMessage(ctx.groupJid, { text: '❌ Hubo un error al procesar el álbum (puede ser muy grande, privado o falló la red).' });
+            }
+        },
+    });
+
     // ── !video ──────────────────────────────────────────────────
     registerCommand({
         name: 'video',
