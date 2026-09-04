@@ -211,7 +211,7 @@ export async function downloadAlbumAsZip(url: string, albumName: string): Promis
             const archiver = require('archiver');
             await new Promise<void>((resolve, reject) => {
                 const output = fs.createWriteStream(zipFilePath);
-                const archive = archiver('zip', { zlib: { level: 9 } });
+                const archive = archiver('zip', { zlib: { level: 0 } }); // Nivel 0 (Solo almacenar) para no saturar la CPU con MP3s
 
                 output.on('close', () => resolve());
                 archive.on('error', (err: any) => reject(err));
